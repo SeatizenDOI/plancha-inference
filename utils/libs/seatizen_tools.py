@@ -97,7 +97,7 @@ def create_trajectory_map(metadata_path, global_trajectories):
         fig = plt.figure(figsize=(10,10), dpi=600)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
         ax.set_extent([df.GPSLongitude.min()-1, df.GPSLongitude.max()+1, df.GPSLatitude.min()-1,df.GPSLatitude.max()+1])
-        ax.add_image(imagery, 17)
+        ax.add_image(imagery, 19)
 
         # drawing trajectories for each session based on their associated dates
         for date in df["Date"].unique():
@@ -107,15 +107,15 @@ def create_trajectory_map(metadata_path, global_trajectories):
         map_path = os.path.join(os.path.dirname(metadata_path), "000_global_map.png")
 
     fig.savefig(map_path, bbox_inches='tight',pad_inches=0, dpi=300)
-    return True
     print("Trajectory map created!")
+    return True
 
 def get_cmap(n, name='hsv'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
 
-def create_predictions_map(predictions_path):
+def create_predictions_map(predictions_path, classes):
     """
         Create a folder of map for each predictions.
         - predictions_path is the path to predictions file
@@ -131,9 +131,6 @@ def create_predictions_map(predictions_path):
     if len(df) == 0: return None # No predictions
     if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
 
-    nb_gps_info = sum([1 for key in ['GPSDateTime', 'SubSecDateTimeOriginal', 'GPSLatitude', 'GPSLongitude', 'GPSTrack', 'GPSRoll', 'GPSPitch'] if key in df])
-
-    categories = list(df)[1:len(list(df))-nb_gps_info] # Remove Filename, Latitude, Longitude, Time, YAW/Pitch/Roll
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
     # Create temp directory
@@ -143,8 +140,8 @@ def create_predictions_map(predictions_path):
         for i in tmp_path.iterdir():
             i.unlink()
     
-    cmap = get_cmap(len(categories))
-    for i, category in tqdm.tqdm(enumerate(categories)):
+    cmap = get_cmap(len(classes))
+    for i, category in tqdm.tqdm(enumerate(classes)):
         fig = plt.figure(figsize=(8, 6), dpi=300)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
         ax.set_extent([df.GPSLongitude.min()-0.0003, df.GPSLongitude.max()+0.0003, df.GPSLatitude.min()-0.0003, df.GPSLatitude.max()+0.0003])
@@ -158,8 +155,21 @@ def create_predictions_map(predictions_path):
 
     return tmp_path
 
+def get_uselful_images(frame_path, jacques_predictions):
 
-def create_pdf_preview(pdf_preview_path, session, session_name, list_of_images):
+    list_frames_useful = []
+    df_jacques = pd.read_csv(jacques_predictions)
+    
+    for frame in sorted(list(frame_path.iterdir())):
+        result = df_jacques[df_jacques["FileName"] == frame.name]
+        if len(result) == 0: continue
+        
+        if result.iloc[0]["Useless"] == 0:
+            list_frames_useful.append(frame)
+
+    return list_frames_useful
+
+def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_path, prediction_gps_path, classes):
     '''
     Function to create a pdf preview of the session. It will contains:
     - a trajectory map
@@ -180,11 +190,6 @@ def create_pdf_preview(pdf_preview_path, session, session_name, list_of_images):
     c.drawString(30, 705, session_name)
 
     # Trajectory map
-    metadata_path = os.path.join(session, "METADATA/metadata.csv")
-
-    if not os.path.exists(metadata_path):
-        print("\nMetadata file not found for trajectory map creation!")
-
     if create_trajectory_map(metadata_path, False):
         print("Adding map to the PDF...")
         image_map = Image.open("map.png")
@@ -240,8 +245,8 @@ def create_pdf_preview(pdf_preview_path, session, session_name, list_of_images):
     c.setFont("Helvetica-Bold", 16)
     c.drawString(30, 530, "Metadata preview")
     print("Loading data for metadata preview...")
-    metadata_file = os.path.join(session, f"METADATA/metadata.csv")
-    df = pd.read_csv(metadata_file)
+  
+    df = pd.read_csv(metadata_path)
     print("Data loaded!")
     preview_df = df.head(20)
     print("Preview dataframe created!")
@@ -283,7 +288,7 @@ def create_pdf_preview(pdf_preview_path, session, session_name, list_of_images):
     c.save()
 
     # Create predictions images and pdf
-    img_folder_predictions_path = create_predictions_map(os.path.join(session, f"METADATA/metadata_gps.csv"))
+    img_folder_predictions_path = create_predictions_map(prediction_gps_path, classes)
     # Can be None if no predictions in csv file (all images useless)
     if img_folder_predictions_path:
         pdf_predictions_path = Path(img_folder_predictions_path, "temp.pdf")

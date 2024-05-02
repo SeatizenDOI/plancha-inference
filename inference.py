@@ -1,18 +1,18 @@
 import shutil
 import traceback
 from tqdm import tqdm
-from time import time
 from pathlib import Path
+from datetime import datetime
 
 from utils.capture_images import CaptureImages
 from utils.savers import JacquesPredictions, MultilabelPredictions
+from utils.libs.predictions_raster_tools import create_rasters_for_classes
 from utils.jacques_predictor import JacquesPredictor, JacquesPredictorGPU, JacquesCSV
 from utils.multilabel_classifier import MultiLabelClassifierCUDA, MultiLabelClassifierTRT
 
-from utils.libs.tools import seconds_to_hoursminsec
 from utils.libs.common_cuda import cuda_initialisation
 from utils.libs.parse_opt import Sources, get_list_sessions
-from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata
+from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images
 
 def parse_args():
     import argparse
@@ -28,8 +28,8 @@ def parse_args():
 
     # Path of input.
     ap.add_argument("-pfol", "--path_folder", default="/home/bioeos/Documents/Bioeos/plancha-session", help="Load all images from a folder of sessions")
-    ap.add_argument("-pses", "--path_session", default="/media/bioeos/F/202210_plancha_session/20221023_SYC-aldabraDUBOIS_ASV-01_01", help="Load all images from a single session")
-    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/saya_saint_brandon_aldabra.csv", help="Load all images from session write in the provided csv file")
+    ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/plancha-session/20231204_REU-TROUDEAU_ASV-2_01", help="Load all images from a single session")
+    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/csv_sessions.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240419_v4.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
@@ -149,7 +149,7 @@ def pipeline_seatizen(opt):
         )
 
         # Iterate through pipeline
-        start = time()
+        start_t = datetime.now()
         print("\t-- Start prediction session \n\n")
         progress = tqdm(total=capture_images.frame_count//batch_size,
                         disable=opt.no_progress)
@@ -170,18 +170,26 @@ def pipeline_seatizen(opt):
         if multilabel_savers:
             multilabel_savers.cleanup()
 
-        print(f"\n -- Elapsed time: {seconds_to_hoursminsec(time() - start)} seconds\n\n")
+        print(f"\n -- Elapsed time: {datetime.now() - start_t} seconds\n\n")
 
         if opt.no_multilabel: continue
         try:
-            # Create metadata_gps.csv
+            predictions_gps = Path(session, "METADATA", "predictions_gps.csv")
+            predictions_scores_gps = Path(session, "METADATA", "predictions_scores_gps.csv")
+            useful_images = get_uselful_images(Path(session, "PROCESSED_DATA/FRAMES"), jacques_csv_name)
+
+            # Create predictions_gps.csv
             print("\t-- Join metadata GPS")
-            join_GPS_metadata(multilabel_pred_csv_name, metadata_csv_name, str(Path(session, "METADATA", "metadata_gps.csv")))
-            join_GPS_metadata(multilabel_scores_csv_name, metadata_csv_name, str(Path(session, "METADATA", "metadata_scores_gps.csv")))
+            join_GPS_metadata(multilabel_pred_csv_name, metadata_csv_name, str(predictions_gps))
+            join_GPS_metadata(multilabel_scores_csv_name, metadata_csv_name, str(predictions_scores_gps))
             
             # Add preview pdf
             print("\t-- Create pdf preview \n\n")
-            create_pdf_preview(session, session, Path(session).name, sorted(list(Path(session, "PROCESSED_DATA/FRAMES").iterdir())))
+            create_pdf_preview(session, session_name, useful_images, metadata_csv_name, predictions_gps, multilabel_model.classes_name)
+
+            # Create raster predictions
+            print("\t-- Creating raster for each class \n\n")
+            create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session_name, 'linear')
             
             print(f"\nSession {session_name} end succesfully ! ", end="\n\n\n")
 
