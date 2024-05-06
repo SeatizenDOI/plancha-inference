@@ -21,6 +21,8 @@ from reportlab.platypus import Table
 from reportlab.lib.pagesizes import letter, landscape
 from cartopy.io.img_tiles import GoogleTiles
 
+COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]
+
 def list_directories(path):
     '''
     Function that only list the directories located at the specified path.
@@ -61,11 +63,12 @@ def evenly_select_images_on_interval(image_list):
     selected_images = [image_list[i] for i in index_list]
     return selected_images
 
-def create_trajectory_map(metadata_path, global_trajectories):
+def create_trajectory_map(metadata_path, global_trajectories, alpha3_code):
     '''
     Function to create the trajectory maps.
     - metadata_path is the path to the metadata.csv file or the metadata_image.csv file.
     - global_trajectories is a boolean to indicate if you are doing the global trajectory map or not.
+    - alpha3_code country code
     Return True if image was generated else False
     '''
     df = pd.read_csv(metadata_path)
@@ -79,15 +82,14 @@ def create_trajectory_map(metadata_path, global_trajectories):
         fig = plt.figure(figsize=(2,2), dpi=300)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
         map_path = "map.png"
-        adb_lat_range = [-13, -7] # latitude range of aldabra and mayotte
-        if df['GPSLatitude'].between(adb_lat_range[0], adb_lat_range[1]).any():
-            ax.set_extent([df.GPSLongitude.min()-0.005, df.GPSLongitude.max()+0.005, df.GPSLatitude.min()-0.005,df.GPSLatitude.max()+0.005])
-            ax.add_image(imagery, 17) # aldabra/mayotte position so we adjust the zoom level
-            ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.1)
-        else: # other positions
+        if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL:
             ax.set_extent([df.GPSLongitude.min()-0.001, df.GPSLongitude.max()+0.001, df.GPSLatitude.min()-0.001,df.GPSLatitude.max()+0.001])
             ax.add_image(imagery, 19)
             ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.3)
+        else: # other positions
+            ax.set_extent([df.GPSLongitude.min()-0.005, df.GPSLongitude.max()+0.005, df.GPSLatitude.min()-0.005,df.GPSLatitude.max()+0.005])
+            ax.add_image(imagery, 17) # aldabra/mayotte position so we adjust the zoom level
+            ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.1)
     else: # global trajectories map
         df['GPSDateTime'] = pd.to_datetime(df['GPSDateTime'])
         df['SubSecDateTimeOriginal'] = pd.to_datetime(df['SubSecDateTimeOriginal'], format="%Y:%m:%d %H:%M:%S.%f")
@@ -115,7 +117,7 @@ def get_cmap(n, name='hsv'):
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
 
-def create_predictions_map(predictions_path, classes):
+def create_predictions_map(predictions_path, classes, alpha3_code):
     """
         Create a folder of map for each predictions.
         - predictions_path is the path to predictions file
@@ -130,6 +132,7 @@ def create_predictions_map(predictions_path, classes):
     df = pd.read_csv(predictions_path)
     if len(df) == 0: return None # No predictions
     if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
+    if df["GPSLatitude"].std() == 0.0 or df["GPSLongitude"].std() == 0.0: return None # All frames have the same gps coordinate
 
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
@@ -145,7 +148,7 @@ def create_predictions_map(predictions_path, classes):
         fig = plt.figure(figsize=(8, 6), dpi=300)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
         ax.set_extent([df.GPSLongitude.min()-0.0003, df.GPSLongitude.max()+0.0003, df.GPSLatitude.min()-0.0003, df.GPSLatitude.max()+0.0003])
-        ax.add_image(imagery, 17)
+        ax.add_image(imagery, 19 if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL else 17)
         ax.plot(df[df[category] == 1].GPSLongitude, df[df[category] == 1].GPSLatitude, '.', color=cmap(i), markersize=2.5, markeredgewidth=0)
         ax.plot(df[df[category] == 0].GPSLongitude, df[df[category] == 0].GPSLatitude, '.', color='tab:gray', markersize=2.0, markeredgewidth=0)
         ax.set_title(category)
@@ -182,6 +185,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     c = canvas.Canvas(pdf_file, pagesize=letter)
     page_width, page_height = letter
     max_height = page_height - 100
+    alpha3_code = session_name.split("_")[1].split("-")[0] # Extract MUS from 20221011_MUS-Lemorne_scuba_1
 
     c.setFont("Helvetica-Bold", 14)
     c.drawString(30, 730, "Session Summary")
@@ -190,7 +194,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     c.drawString(30, 705, session_name)
 
     # Trajectory map
-    if create_trajectory_map(metadata_path, False):
+    if create_trajectory_map(metadata_path, False, alpha3_code):
         print("Adding map to the PDF...")
         image_map = Image.open("map.png")
         image_map_width, image_map_height = image_map.size
@@ -288,7 +292,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     c.save()
 
     # Create predictions images and pdf
-    img_folder_predictions_path = create_predictions_map(prediction_gps_path, classes)
+    img_folder_predictions_path = create_predictions_map(prediction_gps_path, classes, alpha3_code)
     # Can be None if no predictions in csv file (all images useless)
     if img_folder_predictions_path:
         pdf_predictions_path = Path(img_folder_predictions_path, "temp.pdf")

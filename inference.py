@@ -29,7 +29,7 @@ def parse_args():
     # Path of input.
     ap.add_argument("-pfol", "--path_folder", default="/home/bioeos/Documents/Bioeos/plancha-session", help="Load all images from a folder of sessions")
     ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/plancha-session/20231204_REU-TROUDEAU_ASV-2_01", help="Load all images from a single session")
-    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/csv_sessions.csv", help="Load all images from session write in the provided csv file")
+    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/aldabra.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240419_v4.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
