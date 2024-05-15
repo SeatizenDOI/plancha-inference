@@ -28,11 +28,11 @@ def parse_args():
 
     # Path of input.
     ap.add_argument("-pfol", "--path_folder", default="/home/bioeos/Documents/Bioeos/plancha-session", help="Load all images from a folder of sessions")
-    ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/plancha-session/20231204_REU-TROUDEAU_ASV-2_01", help="Load all images from a single session")
-    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/aldabra.csv", help="Load all images from session write in the provided csv file")
+    ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/plancha-session/20230530_REU-HERMITAGE_ASV-1_00", help="Load all images from a single session")
+    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/stleu.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
-    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240419_v4.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
+    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
     ap.add_argument("-jgpu", "--jacques_gpu", action="store_true", help="Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference")
     ap.add_argument("-jcsv", "--jacques_csv", action="store_true", help="Used csv file of jacques predictions")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
@@ -108,7 +108,7 @@ def pipeline_seatizen(opt):
         multilabel_scores_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
 
         metadata_csv_name = Path(session, "METADATA/metadata.csv")
-        
+        print(metadata_csv_name)
         if not Path.exists(metadata_csv_name):
             print(f"[ERROR] Session {session_name} doesn't have a metadata file.")
             sessions_fail.append(session_name)
@@ -125,7 +125,7 @@ def pipeline_seatizen(opt):
 
             # Delete preview file
             for file in Path(session).iterdir():
-                if file.is_file() and file.suffix == ".pdf":
+                if file.is_file() and file.suffix.lower() == ".pdf":
                     file.unlink()
         else:
             path_IA = Path(session, "PROCESSED_DATA/IA")
@@ -176,7 +176,7 @@ def pipeline_seatizen(opt):
         try:
             predictions_gps = Path(session, "METADATA", "predictions_gps.csv")
             predictions_scores_gps = Path(session, "METADATA", "predictions_scores_gps.csv")
-            useful_images = get_uselful_images(Path(session, "PROCESSED_DATA/FRAMES"), jacques_csv_name)
+            useful_images = get_uselful_images(capture_images.frames_path, jacques_csv_name)
 
             # Create predictions_gps.csv
             print("\t-- Join metadata GPS")

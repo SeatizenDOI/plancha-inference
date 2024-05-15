@@ -43,7 +43,7 @@ def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
 
     # Merge the DataFrames based on the image names
     # Sometimes we don't have this information due to no bin
-    keys = [key for key in ['Image_name', 'GPSDateTime', 'SubSecDateTimeOriginal', 'GPSLatitude', 'GPSLongitude', 'GPSTrack', 'GPSRoll', 'GPSPitch'] if key in gps_df] 
+    keys = [key for key in ['Image_name', 'GPSDateTime', 'SubSecDateTimeOriginal', 'GPSLatitude', 'GPSLongitude', 'GPSTrack', 'GPSRoll', 'GPSPitch', 'GPSAltitude'] if key in gps_df] 
     try:
         merged_df = annot_df.merge(gps_df[keys], on='Image_name', how='left')
     except KeyError:
@@ -132,7 +132,7 @@ def create_predictions_map(predictions_path, classes, alpha3_code):
     df = pd.read_csv(predictions_path)
     if len(df) == 0: return None # No predictions
     if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
-    if df["GPSLatitude"].std() == 0.0 or df["GPSLongitude"].std() == 0.0: return None # All frames have the same gps coordinate
+    if round(df["GPSLatitude"].std(), 3) == 0.0 or round(df["GPSLongitude"].std(), 3) == 0.0: return None # All frames have the same gps coordinate
 
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
@@ -158,12 +158,12 @@ def create_predictions_map(predictions_path, classes, alpha3_code):
 
     return tmp_path
 
-def get_uselful_images(frame_path, jacques_predictions):
+def get_uselful_images(frames_path_list, jacques_predictions):
 
     list_frames_useful = []
     df_jacques = pd.read_csv(jacques_predictions)
     
-    for frame in sorted(list(frame_path.iterdir())):
+    for frame in frames_path_list:
         result = df_jacques[df_jacques["FileName"] == frame.name]
         if len(result) == 0: continue
         

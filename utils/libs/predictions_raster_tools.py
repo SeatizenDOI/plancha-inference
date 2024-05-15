@@ -98,7 +98,7 @@ def create_rasters_for_classes(predictions_csv_path, classes, output_path, sessi
     predictions_csv = pd.read_csv(predictions_csv_path)
     if len(predictions_csv) == 0: return None # No predictions
     if "GPSLongitude" not in predictions_csv or "GPSLatitude" not in predictions_csv: return None # No GPS coordinate
-    if predictions_csv["GPSLatitude"].std() == 0.0 or predictions_csv["GPSLongitude"].std() == 0.0: return None # All frames have the same gps coordinate
+    if round(predictions_csv["GPSLatitude"].std(), 3) == 0.0 or round(predictions_csv["GPSLongitude"].std(), 3) == 0.0: return None # All frames have the same gps coordinate
 
     # Assuming compute_grid_value and prepare_gridded_data are already defined and correct
     grid_value = compute_grid_value(predictions_csv)

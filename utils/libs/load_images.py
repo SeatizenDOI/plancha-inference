@@ -53,24 +53,31 @@ def load_frames_from_folder(src):
 
 def load_frames_from_session(src):
     """ Import frames from a single session """
-    path_to_frames_folder = Path(src, "PROCESSED_DATA", "FRAMES")
+    frames_path = []
+
+    # Get metadata_file csv
+    path_metadata = Path(src, "METADATA", "metadata.csv")
+    if not Path.exists(path_metadata) or not path_metadata.is_file():
+        print(f"No metadata.csv for session {src}, cannot extract file.")
+        return frames_path
     
-    # Check if session exists.
-    if not Path.exists(path_to_frames_folder) or not Path.is_dir(path_to_frames_folder):
-        print(f"Path to folder {path_to_frames_folder} doesn't exist.")
-        return []
+    metadata_df = pd.read_csv(path_metadata)
+    if len(metadata_df) == 0: return frames_path
+    
+    try:
+        relative_path_key = [key for key in list(metadata_df) if "relative_file_path" in key][0]
+    except KeyError:
+        raise NameError(f"Cannot find relative path key for {src}")
 
     # Iter on each file
     cpt_image, cpt_error = 0, 0
-    frames_path = []
-    for file in Path.iterdir(path_to_frames_folder):
+    for _, row in metadata_df.iterrows():
+        path_img = Path(Path(src).parent, row[relative_path_key])
         cpt_image += 1
         # Check if it's a file and if ended with image extension
-        if not file.is_file() or not file.suffix.lower() in ('.png', '.jpg', '.jpeg'):
+        if not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):
             cpt_error += 1
             continue
-        frames_path.append(Path(path_to_frames_folder, file))
-
-    print(f"Folder {path_to_frames_folder}, number of files: {cpt_image}, number of errors: {cpt_error}")
-
+        frames_path.append(path_img)
+    print(f"Folder {src}, number of files: {cpt_image}, number of errors: {cpt_error}")
     return frames_path
