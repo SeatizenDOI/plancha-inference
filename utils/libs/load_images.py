@@ -66,13 +66,13 @@ def load_frames_from_session(src):
     
     try:
         relative_path_key = [key for key in list(metadata_df) if "relative_file_path" in key][0]
-    except KeyError:
+    except Exception:
         raise NameError(f"Cannot find relative path key for {src}")
 
     # Iter on each file
     cpt_image, cpt_error = 0, 0
     for _, row in metadata_df.iterrows():
-        path_img = Path(Path(src).parent, row[relative_path_key])
+        path_img = Path(Path(src).parent, *[x for x in row[relative_path_key].split("/") if x]) # Sometimes relative path start with /
         cpt_image += 1
         # Check if it's a file and if ended with image extension
         if not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):

@@ -1,0 +1,21 @@
+name: inference_env
+channels:
+  - defaults
+dependencies:
+  - python=3.11.7
+  - pip=23.3.1
+  - pip:
+    - numpy
+    - natsort
+    - transformers
+    - pandas
+    - pillow
+    - tqdm
+    - zenodo_get
+    - pypdf
+    - reportlab
+    - cartopy
+    - scipy
+    - matplotlib
+    - geocube
+    - huggingface_hub

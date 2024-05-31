@@ -12,7 +12,7 @@ from utils.multilabel_classifier import MultiLabelClassifierCUDA, MultiLabelClas
 
 from utils.libs.common_cuda import cuda_initialisation
 from utils.libs.parse_opt import Sources, get_list_sessions
-from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images
+from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
 
 def parse_args():
     import argparse
@@ -27,8 +27,8 @@ def parse_args():
     arg_input.add_argument("-ecsv", "--enable_csv", action="store_true", help="Take all images from session in csv file")
 
     # Path of input.
-    ap.add_argument("-pfol", "--path_folder", default="/home/bioeos/Documents/Bioeos/plancha-session", help="Load all images from a folder of sessions")
-    ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/plancha-session/20230530_REU-HERMITAGE_ASV-1_00", help="Load all images from a single session")
+    ap.add_argument("-pfol", "--path_folder", default="/media/bioeos/D/202311_plancha_session/", help="Load all images from a folder of sessions")
+    ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/annotations_some_image/20240524_REU-LE-PORT_HUMAN-1_01/", help="Load all images from a single session")
     ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/stleu.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
@@ -45,9 +45,11 @@ def parse_args():
     # Optional arguments.
     ap.add_argument("-np", "--no-progress", action="store_true", help="Hide display progress")
     ap.add_argument("-ns", "--no-save", action="store_true", help="Don't save annotations")
+    ap.add_argument("-npr", "--no_prediction_raster", action="store_true", help="Don't produce predictions rasters")
     ap.add_argument("-c", "--clean", action="store_true", help="Clean pdf preview and predictions files")
     ap.add_argument("-is", "--index_start", default="0", help="Choose from which index to start")
     ap.add_argument("-bs", "--batch_size", default="1", help="Numbers of frames processed in one time")
+    ap.add_argument("-minp", "--min_prediction", default="100", help="Minimum for keeping predictions after inference.")
 
     return ap.parse_args()
 
@@ -55,6 +57,7 @@ def pipeline_seatizen(opt):
     print("\n-- Parse input options", end="\n\n")
     
     batch_size = int(opt.batch_size) if opt.batch_size.isnumeric() else 1
+    min_prediction = int(opt.min_prediction) if opt.min_prediction.isnumeric() else 100
 
     # Load correct cuda initializer
     cuda_initialisation(opt)
@@ -103,17 +106,6 @@ def pipeline_seatizen(opt):
         jacques_model_name = opt.jacques_checkpoint_url.replace("/", "_")
         print(f"\nLaunched session {session_name}\n\n")
 
-        jacques_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
-        multilabel_pred_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}.csv")
-        multilabel_scores_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
-
-        metadata_csv_name = Path(session, "METADATA/metadata.csv")
-        print(metadata_csv_name)
-        if not Path.exists(metadata_csv_name):
-            print(f"[ERROR] Session {session_name} doesn't have a metadata file.")
-            sessions_fail.append(session_name)
-            continue
-
         # Clean sessions if needed
         if opt.clean:
             print("\t-- Clean session \n\n")
@@ -130,6 +122,16 @@ def pipeline_seatizen(opt):
         else:
             path_IA = Path(session, "PROCESSED_DATA/IA")
             path_IA.mkdir(exist_ok=True)
+
+        jacques_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
+        multilabel_pred_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}.csv")
+        multilabel_scores_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
+
+        metadata_csv_name = Path(session, "METADATA/metadata.csv")
+        if not Path.exists(metadata_csv_name):
+            print(f"[ERROR] Session {session_name} doesn't have a metadata file.")
+            sessions_fail.append(session_name)
+            continue
 
         # Setup pipeline for current session
         capture_images.setup(session, Sources.SESSION)
@@ -182,14 +184,20 @@ def pipeline_seatizen(opt):
             print("\t-- Join metadata GPS")
             join_GPS_metadata(multilabel_pred_csv_name, metadata_csv_name, str(predictions_gps))
             join_GPS_metadata(multilabel_scores_csv_name, metadata_csv_name, str(predictions_scores_gps))
+
+            # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
+            if check_and_remove_predictions_files_if_necessary(session, predictions_gps, predictions_scores_gps, min_prediction):
+                print("[WARNING] All predictions have been removed due to lack of multilabel predictions.")
+                continue
             
             # Add preview pdf
-            print("\t-- Create pdf preview \n\n")
+            print("\t-- Create pdf preview \n\n") # TODO Add bathy preview in global pdf
             create_pdf_preview(session, session_name, useful_images, metadata_csv_name, predictions_gps, multilabel_model.classes_name)
 
             # Create raster predictions
             print("\t-- Creating raster for each class \n\n")
-            create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session_name, 'linear')
+            if not opt.no_prediction_raster:
+                create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session_name, 'linear')
             
             print(f"\nSession {session_name} end succesfully ! ", end="\n\n\n")
 

@@ -5,20 +5,25 @@
 
 import os
 import tqdm
+import time
 import numpy as np
 import pandas as pd
 from PIL import Image
 from pathlib import Path
 from textwrap import wrap
-import cartopy.crs as ccrs
 from pypdf import PdfMerger
+from natsort import natsorted
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table
 from reportlab.lib.pagesizes import letter, landscape
+
+import cartopy.crs as ccrs
 from cartopy.io.img_tiles import GoogleTiles
 
 COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]
@@ -132,12 +137,12 @@ def create_predictions_map(predictions_path, classes, alpha3_code):
     df = pd.read_csv(predictions_path)
     if len(df) == 0: return None # No predictions
     if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
-    if round(df["GPSLatitude"].std(), 3) == 0.0 or round(df["GPSLongitude"].std(), 3) == 0.0: return None # All frames have the same gps coordinate
+    if round(df["GPSLatitude"].std(), 10) == 0.0 or round(df["GPSLongitude"].std(), 10) == 0.0: return None # All frames have the same gps coordinate
 
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
     # Create temp directory
-    tmp_path = Path("/tmp/pred_jpg")
+    tmp_path = Path(f"/tmp/pred_{int(time.time())}_jpg")
     tmp_path.mkdir(parents=True, exist_ok=True)
     if len(list(tmp_path.iterdir())) > 0:
         for i in tmp_path.iterdir():
@@ -296,7 +301,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     # Can be None if no predictions in csv file (all images useless)
     if img_folder_predictions_path:
         pdf_predictions_path = Path(img_folder_predictions_path, "temp.pdf")
-        pred_images_path = [img_name for img_name in sorted(list(img_folder_predictions_path.iterdir())) if img_name.suffix.lower() == ".jpg"]
+        pred_images_path = [img_name for img_name in natsorted(list(img_folder_predictions_path.iterdir())) if img_name.suffix.lower() == ".jpg"]
 
         images = [ Image.open(f) for f in pred_images_path ]
         images[0].save(
@@ -310,4 +315,33 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
         merger.write(pdf_file)
         merger.close()
 
+        # Delete tmp folder
+        for file in Path(img_folder_predictions_path).iterdir():
+            file.unlink()
+        img_folder_predictions_path.rmdir()
     print("PDF created!")
+
+def check_and_remove_predictions_files_if_necessary(session_path, predictions_gps, predictions_scores_gps, min_prediction):
+    """ Remove all predictions stuff if we don't have enough predictions """
+    if Path.exists(predictions_gps):
+        predictions_gps_df = pd.read_csv(predictions_gps)
+        if len(predictions_gps_df) > min_prediction: return False
+    
+    # If we reached this point, we don't have enough predictions so we delete all.
+    if Path.exists(predictions_gps):
+        Path(predictions_gps).unlink()
+    
+    if Path.exists(predictions_scores_gps):
+        Path(predictions_scores_gps).unlink()
+    
+    metadata_csv = Path(session_path, "METADATA", "metadata.csv")
+    if Path.exists(metadata_csv) and metadata_csv.is_file():
+        metadata_csv.unlink()
+    
+    ia_folder = Path(session_path, "PROCESSED_DATA", "IA")
+    if Path.exists(ia_folder) and ia_folder.is_dir():
+        for file in ia_folder.iterdir():
+            file.unlink()
+        ia_folder.rmdir()
+
+    return True

@@ -1,5 +1,5 @@
-
 from PIL import Image
+from natsort import natsorted
 
 from .pipeline import Pipeline
 from .libs.load_images import load_frames_from_source
@@ -16,7 +16,7 @@ class CaptureImages(Pipeline):
     
     def setup(self, src, mode):
         """ Reset image loaded """
-        self.frames_path = sorted(load_frames_from_source(src, mode))
+        self.frames_path = natsorted(load_frames_from_source(src, mode))
         self.frame_count = len(self.frames_path)
         self.frame_id = 0
 
