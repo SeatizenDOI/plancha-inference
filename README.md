@@ -38,6 +38,8 @@ The METADATA folder will also have two additional files, which are the predictio
 
 ## Installation
 
+***This installation guide was written a few months after the actual installation and has not yet been tested.***
+
 All the sessions was proceed on this hardware (Dell Precision 7770):
 
 - Intel Core i9-12950HX
