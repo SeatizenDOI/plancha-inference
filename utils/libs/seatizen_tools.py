@@ -54,6 +54,9 @@ def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
     except KeyError:
         print("[ERROR] No key to merge gps information in metadata.")
     
+    # Don't save file if not gps coordinates.
+    if "GPSLatitude" not in keys and "GPSLongitude" not in keys: return
+    
     # Drop the 'Image_name' column from merged_df
     merged_df.drop(columns='Image_name', inplace=True)
     
@@ -199,6 +202,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     c.drawString(30, 705, session_name)
 
     # Trajectory map
+    img_preview_y = 730
     if create_trajectory_map(metadata_path, False, alpha3_code):
         print("Adding map to the PDF...")
         image_map = Image.open("map.png")
@@ -212,16 +216,20 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
         c.setFillColor(colors.black)
         c.drawString(30, 650, "Trajectory map")
         print("Map added!")
+    
+        c.showPage()
+    else:
+        img_preview_y = 650 # If trajectory map is not printing, we draw thumbnails on the first page
 
     # Thumbnails
-    c.showPage()
+    c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(30, 730, "Images previews")
+    c.drawString(30, img_preview_y, "Images previews")
 
     selected_images = evenly_select_images_on_interval(list_of_images)
     print("Images previews selected!\n")
     x_coord = 30
-    y_coord = max_height
+    y_coord = img_preview_y - 38 # max_height = 692. Initially Images preview is draw at 730, but if draw at 650, substract 38 to get same difference 
 
     for i, image in enumerate(selected_images):
         if i % 5 == 0 and i != 0:
