@@ -48,6 +48,7 @@ def parse_args():
     ap.add_argument("-npr", "--no_prediction_raster", action="store_true", help="Don't produce predictions rasters")
     ap.add_argument("-c", "--clean", action="store_true", help="Clean pdf preview and predictions files")
     ap.add_argument("-is", "--index_start", default="0", help="Choose from which index to start")
+    ap.add_argument("-ip", "--index_position", default="-1", help="if != -1, take only session at selected index")
     ap.add_argument("-bs", "--batch_size", default="1", help="Numbers of frames processed in one time")
     ap.add_argument("-minp", "--min_prediction", default="100", help="Minimum for keeping predictions after inference.")
 
@@ -98,9 +99,13 @@ def pipeline_seatizen(opt):
     sessions_fail = []
     list_session = get_list_sessions(opt)
     index_start = int(opt.index_start) if opt.index_start.isnumeric() and int(opt.index_start) < len(list_session) else 0
+    index_position = int(opt.index_position) if opt.index_position.isnumeric() and \
+                                            int(opt.index_position) > 0 and \
+                                            int(opt.index_position) < len(list_session) else -1
+    sessions = list_session[index_start:] if index_position == -1 else [list_session[index_position]]
     print("\n-- Start inference !", end="\n\n")
 
-    for session in list_session[index_start:]:
+    for session in sessions:
 
         session_name = Path(session).name
         jacques_model_name = opt.jacques_checkpoint_url.replace("/", "_")
