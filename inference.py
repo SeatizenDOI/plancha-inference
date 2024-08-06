@@ -99,9 +99,9 @@ def pipeline_seatizen(opt):
     sessions_fail = []
     list_session = get_list_sessions(opt)
     index_start = int(opt.index_start) if opt.index_start.isnumeric() and int(opt.index_start) < len(list_session) else 0
-    index_position = int(opt.index_position) if opt.index_position.isnumeric() and \
+    index_position = int(opt.index_position)-1 if opt.index_position.isnumeric() and \
                                             int(opt.index_position) > 0 and \
-                                            int(opt.index_position) < len(list_session) else -1
+                                            int(opt.index_position) <= len(list_session) else -1
     sessions = list_session[index_start:] if index_position == -1 else [list_session[index_position]]
     print("\n-- Start inference !", end="\n\n")
 
