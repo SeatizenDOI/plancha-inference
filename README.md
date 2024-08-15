@@ -29,7 +29,7 @@ At the end of the process, this code will create a PROCESSED_DATA/IA folder that
 
 The METADATA folder will also have two additional files, which are the predictions with GPS coordinates and IMU values.
 
-
+* [Docker](./docker/README.md)
 * [Installation](#installation)
 * [Usage](#usage)
 * [Contributing](#contributing)
@@ -143,6 +143,7 @@ The script also includes optional arguments to fine-tune its behavior:
 * `-npr`, `--no_prediction_raster`: Don't produce predictions rasters. Default False
 * `-c`, `--clean`: Clean pdf preview and predictions files. Default: False
 * `-is`, `--index_start`: Choose from which index to start. Default: 0
+* `-ip`, `--index_position`: If != -1, take only session at selected index. Default: -1
 * `-bs`, `--batch_size`: Numbers of frames processed in one time. Default: 1
 * `-minp`, `--min_prediction`: Minimum for keeping predictions after inference. Default: 100
 
