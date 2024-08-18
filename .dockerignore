@@ -1,5 +1,7 @@
+.git
 __pycache__
 annotations
 models
+!models/jacques/20240513_v20.0/
 profiling
 *.ipynb
