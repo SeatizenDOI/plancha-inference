@@ -17,15 +17,15 @@ The command execute in the entrypoint is :
 
 ## Build.
 
-`docker build -t plancha-inference-image . `
+`docker build -t plancha-inference-image:latest -f ./docker/Dockerfile .`
 
 ## Run.
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm -v /home/gouderg/Documents/Ifremer/plancha:/plancha IMAGE_ID`
+`docker run --gpus all -it --user $(id -u):$(id -g) --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_pos=1 -v /home/gouderg/Documents/Ifremer/plancha:/plancha IMAGE_ID`
+`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_pos=1 -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_start=0 -v  /home/gouderg/Documents/Ifremer/plancha:/plancha IMAGE_ID`
+`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_start=0 -v  /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
 Launch container with :
 * `--gpus all`: All gpus found.
