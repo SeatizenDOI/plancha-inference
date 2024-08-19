@@ -12,7 +12,7 @@ We also need a tensorrt version below 10.
 
 The command execute in the entrypoint is :
 
-`python inference.py -efol -pfol /plancha -jgpu -mlgpu -c`
+`python inference.py -efol -pfol /home/seatizen/plancha -jgpu -mlgpu -c`
 
 
 ## Build.
@@ -21,18 +21,17 @@ The command execute in the entrypoint is :
 
 ## Run.
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
+`docker run --gpus all -it --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_pos=1 -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
+`docker run --gpus all -it --rm --env index_pos=1 -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
-`docker run --gpus all -it --user $(id -u):$(id -g) --rm --env index_start=0 -v  /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
+`docker run --gpus all -it --rm --env index_start=0 -v  /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
 Launch container with :
 * `--gpus all`: All gpus found.
 * `-it`: In interaction mode. You can write command in the docker after the script end.
 * `--rm`: Remove the container after exit.
 * `-v /path/to/folder/plancha_sessions:/plancha`: Mount a volume to acces to plancha session.
-* `--user $(id -u):$(id -g)`: Run container as you to avoid create and write script in root mode.
 
 You can add two arguments :
 * `--env index_pos=1`: Execute only one session in the folder at index_position. The first is one not zero.
