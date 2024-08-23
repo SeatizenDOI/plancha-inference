@@ -89,7 +89,7 @@ def create_trajectory_map(metadata_path, global_trajectories, alpha3_code):
     if not global_trajectories:
         fig = plt.figure(figsize=(2,2), dpi=300)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
-        map_path = "map.png"
+        map_path = "/tmp/map.png"
         if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL:
             ax.set_extent([df.GPSLongitude.min()-0.001, df.GPSLongitude.max()+0.001, df.GPSLatitude.min()-0.001,df.GPSLatitude.max()+0.001])
             ax.add_image(imagery, 19)
@@ -205,12 +205,12 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     img_preview_y = 730
     if create_trajectory_map(metadata_path, False, alpha3_code):
         print("Adding map to the PDF...")
-        image_map = Image.open("map.png")
+        image_map = Image.open("/tmp/map.png")
         image_map_width, image_map_height = image_map.size
         x = (page_width - image_map_width) / 2
         y = (page_height - image_map_height) / 2
-        c.drawImage("map.png", x, y)
-        os.remove("map.png") # deleting map.png
+        c.drawImage("/tmp/map.png", x, y)
+        os.remove("/tmp/map.png") # deleting map.png
 
         c.setFont("Helvetica-Bold", 16)
         c.setFillColor(colors.black)

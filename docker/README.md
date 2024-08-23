@@ -18,12 +18,21 @@ The command execute in the entrypoint is :
 ## Build.
 
 `docker build -t plancha-inference-image:latest -f ./docker/Dockerfile .`
+`docker tag plancha-inference-image:latest groderg/plancha-inference-image:latest`
+`docker push groderg/plancha-inference-image:latest`
+
+```bash
+docker build -t plancha-inference-image:latest -f ./docker/Dockerfile . && \
+docker tag plancha-inference-image:latest groderg/plancha-inference-image:latest && \
+docker push groderg/plancha-inference-image:latest
+```
+
 
 ## Run.
 
 `docker run --gpus all -it --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
-`docker run --gpus all -it --rm --env index_pos=1 -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
+`docker run --gpus all -it --rm --env index_pos=3 -v /home/bioeos/Documents/Bioeos/plancha-session:/home/seatizen/plancha plancha-inference-image:latest`
 
 `docker run --gpus all -it --rm --env index_start=0 -v  /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest`
 
@@ -38,3 +47,16 @@ You can add two arguments :
 * `--env index_start=0`: Execute all session after index_start. Ex: if index_start = 2, folders_of_sessions[2:]
 
 If arguments is invalid, execute scripts on all sessions.
+
+# Singularity cheatsheet
+
+Datarmor, the ifremer supercomputer, doesn't handle custom docker image easily. You need to convert your docker image to a singularity container.
+
+## Build container.
+
+
+singularity build -f inference.sif docker://groderg/plancha-inference-image:latest
+
+## Launch container.
+
+singularity run --nv --env index_pos=2 --bind /home1/datawork/villien/plancha-session:/home/seatizen/plancha inference.sif

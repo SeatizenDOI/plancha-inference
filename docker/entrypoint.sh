@@ -1,5 +1,7 @@
 #!/bin/sh
 
+cd /home/seatizen/app
+
 # Check for environment variable and set command accordingly
 if [[ -n ${index_pos} ]]; then
   COMMAND="python inference.py -efol -pfol /home/seatizen/plancha -jgpu -mlgpu -c -ip $index_pos"
