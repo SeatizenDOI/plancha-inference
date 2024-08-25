@@ -29,7 +29,7 @@ At the end of the process, this code will create a PROCESSED_DATA/IA folder that
 
 The METADATA folder will also have two additional files, which are the predictions with GPS coordinates and IMU values.
 
-* [Docker](./docker/README.md)
+* [Docker](./docker.README.md)
 * [Installation](#installation)
 * [Usage](#usage)
 * [Contributing](#contributing)

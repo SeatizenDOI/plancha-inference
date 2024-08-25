@@ -1,11 +1,5 @@
 FROM nvcr.io/nvidia/tensorrt:23.12-py3
 
-ARG index_pos
-ENV env_index_pos=$index_pos
-
-ARG index_start
-ENV env_index_start=$index_start
-
 # Refresh apt && Create user && Setup python with tensorrt and install all dependencies.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends wget && \
@@ -17,9 +11,6 @@ RUN apt-get update && \
     pip3 install --no-cache-dir torch torchvision \
     torchaudio --index-url https://download.pytorch.org/whl/cu124
 
-# Copy entrypoint script into the container.
-COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-
 # Add local directory.
 ADD --chown=seatizen ../. /home/seatizen/app/
 
@@ -30,6 +21,4 @@ WORKDIR /home/seatizen/app
 USER seatizen
 
 # Define the entrypoint script to be executed.
-ENTRYPOINT ["entrypoint.sh"]
-
-
+ENTRYPOINT ["python", "/home/seatizen/app/inference.py"]
