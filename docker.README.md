@@ -10,19 +10,19 @@ We also need a tensorrt version below 10.
 
 ## Build.
 
-`docker build -t plancha-inference-image:latest .`
-`docker tag plancha-inference-image:latest groderg/plancha-inference-image:latest`
-`docker push groderg/plancha-inference-image:latest`
+`docker build -t plancha-inference:latest .`
+`docker tag plancha-inference:latest seatizendoi/plancha-inference:latest`
+`docker push seatizendoi/plancha-inference:latest`
 
 ```bash
-docker build -t plancha-inference-image:latest . && \
-docker tag plancha-inference-image:latest groderg/plancha-inference-image:latest && \
-docker push groderg/plancha-inference-image:latest
+docker build -t plancha-inference:latest . && \
+docker tag plancha-inference:latest seatizendoi/plancha-inference:latest && \
+docker push seatizendoi/plancha-inference:latest
 ```
 
 ## Run.
 
-`docker run --gpus all --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference-image:latest [OPTIONS OF INFERENCE.PY file]`
+`docker run --gpus all --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference:latest [OPTIONS OF INFERENCE.PY file]`
 
 Launch container with :
 * `--gpus all`: All gpus found.
@@ -38,7 +38,7 @@ Datarmor, the ifremer supercomputer, doesn't handle custom docker image easily. 
 ## Build container.
 
 
-singularity build -f inference.sif docker://groderg/plancha-inference-image:latest
+singularity build -f inference.sif docker://seatizendoi/plancha-inference:latest
 
 ## Launch container.
 
