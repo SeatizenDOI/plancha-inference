@@ -158,18 +158,18 @@ def pipeline_seatizen(opt):
         # Iterate through pipeline
         start_t = datetime.now()
         print("\t-- Start prediction session \n\n")
-        # progress = tqdm(total=capture_images.frame_count//batch_size,
-        #                 disable=opt.no_progress)
+        progress = tqdm(total=capture_images.frame_count//batch_size,
+                        disable=opt.no_progress)
         
-        # try:
-        #     for _ in pipeline:
-        #         progress.update(1)
-        # except StopIteration:
-        #     return
-        # except KeyboardInterrupt:
-        #     return
-        # finally:
-        #     progress.close()
+        try:
+            for _ in pipeline:
+                progress.update(1)
+        except StopIteration:
+            return
+        except KeyboardInterrupt:
+            return
+        finally:
+            progress.close()
 
         # Pipeline cleanup
         if jacques_savers:
