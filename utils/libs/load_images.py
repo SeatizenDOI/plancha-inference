@@ -63,7 +63,7 @@ def load_frames_from_session(src):
     
     metadata_df = pd.read_csv(path_metadata)
     if len(metadata_df) == 0: return frames_path
-    
+
     try:
         relative_path_key = [key for key in list(metadata_df) if "relative_file_path" in key][0]
     except Exception:
@@ -75,7 +75,7 @@ def load_frames_from_session(src):
         path_img = Path(Path(src).parent, *[x for x in row[relative_path_key].split("/") if x]) # Sometimes relative path start with /
         cpt_image += 1
         # Check if it's a file and if ended with image extension
-        if not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):
+        if not path_img.exists() or not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):
             cpt_error += 1
             continue
         frames_path.append(path_img)

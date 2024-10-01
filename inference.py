@@ -118,7 +118,7 @@ def pipeline_seatizen(opt):
             path_IA = Path(session, "PROCESSED_DATA/IA")
             if Path.exists(path_IA):
                 shutil.rmtree(path_IA)
-            path_IA.mkdir(exist_ok=True)
+            path_IA.mkdir(exist_ok=True, parents=True)
 
             # Delete preview file
             for file in Path(session).iterdir():
@@ -126,7 +126,7 @@ def pipeline_seatizen(opt):
                     file.unlink()
         else:
             path_IA = Path(session, "PROCESSED_DATA/IA")
-            path_IA.mkdir(exist_ok=True)
+            path_IA.mkdir(exist_ok=True, parents=True)
 
         jacques_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
         multilabel_pred_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}.csv")
@@ -158,18 +158,18 @@ def pipeline_seatizen(opt):
         # Iterate through pipeline
         start_t = datetime.now()
         print("\t-- Start prediction session \n\n")
-        progress = tqdm(total=capture_images.frame_count//batch_size,
-                        disable=opt.no_progress)
+        # progress = tqdm(total=capture_images.frame_count//batch_size,
+        #                 disable=opt.no_progress)
         
-        try:
-            for _ in pipeline:
-                progress.update(1)
-        except StopIteration:
-            return
-        except KeyboardInterrupt:
-            return
-        finally:
-            progress.close()
+        # try:
+        #     for _ in pipeline:
+        #         progress.update(1)
+        # except StopIteration:
+        #     return
+        # except KeyboardInterrupt:
+        #     return
+        # finally:
+        #     progress.close()
 
         # Pipeline cleanup
         if jacques_savers:

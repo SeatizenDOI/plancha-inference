@@ -41,7 +41,7 @@ def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
     '''
     annot_df = pd.read_csv(annotation_csv_path)
     gps_df = pd.read_csv(metadata_path)
-    
+
     # Extract image names from the file paths
     annot_df['Image_name'] = annot_df['FileName']
     gps_df['Image_name'] = gps_df['FileName']
@@ -54,7 +54,7 @@ def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
     except KeyError:
         print("[ERROR] No key to merge gps information in metadata.")
     
-    # Don't save file if not gps coordinates.
+    # Don't save file if no gps coordinates.
     if "GPSLatitude" not in keys and "GPSLongitude" not in keys: return
     
     # Drop the 'Image_name' column from merged_df
