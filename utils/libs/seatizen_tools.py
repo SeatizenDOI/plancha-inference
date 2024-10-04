@@ -11,7 +11,7 @@ import pandas as pd
 from PIL import Image
 from pathlib import Path
 from textwrap import wrap
-from pypdf import PdfMerger
+from pypdf import PdfWriter
 from natsort import natsorted
 
 import matplotlib
@@ -317,7 +317,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
         )
 
         # Concat with trajectory pdf
-        merger = PdfMerger()
+        merger = PdfWriter()
         for pdf in [pdf_file, pdf_predictions_path]:
             merger.append(pdf)
         merger.write(pdf_file)
