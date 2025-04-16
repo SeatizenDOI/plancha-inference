@@ -41,7 +41,7 @@ def getDynoConfig(repo_name):
     
     return config
 
-def getThreshold(repo_name):
+def get_threshold(repo_name):
     threshold_file = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name, "threshold.json")
     threshold = np.array([])
     if Path.exists(threshold_file):
@@ -79,5 +79,4 @@ def build_onnx_file_for_multilabel(repo_name, path_to_multilabel_onnx, batch_siz
         input_names=['pixel_values'],
         output_names=['logits'],
         do_constant_folding=True,
-        opset_version=13,
     )

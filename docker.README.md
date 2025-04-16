@@ -22,7 +22,11 @@ docker push seatizendoi/plancha-inference:latest
 
 ## Run.
 
-`docker run --gpus all --rm -v /home/gouderg/Documents/Ifremer/plancha:/home/seatizen/plancha plancha-inference:latest [OPTIONS OF INFERENCE.PY file]`
+`docker run --gpus all --rm -v /media/bioeos/F/202504_plancha_session:/home/seatizen/plancha plancha-inference:latest [OPTIONS OF INFERENCE.PY file]`
+
+```
+docker run --gpus all --rm -v /media/bioeos/F/202504_plancha_session:/home/seatizen/plancha plancha-inference:latest -efol -pfol /home/seatizen/plancha -jgpu -mlgpu -c
+```
 
 Launch container with :
 * `--gpus all`: All gpus found.

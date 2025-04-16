@@ -2,20 +2,22 @@ name: inference_env
 channels:
   - defaults
 dependencies:
-  - python=3.11.7
-  - pip=23.3.1
+  - python=3.12.9
+  - pip=25.0
   - pip:
-    - numpy
-    - natsort
-    - transformers
-    - pandas
-    - pillow
-    - tqdm
-    - zenodo_get
-    - pypdf
-    - reportlab
-    - cartopy
-    - scipy
-    - matplotlib
-    - geocube
-    - huggingface_hub
+    - numpy==2.2.4
+    - natsort==8.4.0
+    - transformers==4.51.3
+    - pandas==2.2.3
+    - pillow==11.2.1
+    - tqdm==4.67.1
+    - zenodo_get==1.6.1
+    - pypdf==5.4.0
+    - reportlab==4.3.1
+    - cartopy==0.24.1
+    - scipy==1.15.2
+    - matplotlib==3.10.1
+    - geocube==0.7.1
+    - huggingface_hub==0.30.2
+    - natsort==8.4.0
+    - torch==2.8.0

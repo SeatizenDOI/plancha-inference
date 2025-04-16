@@ -48,11 +48,10 @@ All the sessions was proceed on this hardware (Dell Precision 7770):
 
 And the software was :
 
-- Ubuntu 22.04.4 LTS
-- Nvidia driver version 535.171.04, Cuda 12.1
-- nvcc (NVIDIA Cuda compiler driver) : Cuda compilation tools, release 12.1, V12.1.66 | Build cuda_12.1.r12.1/compiler.32415258_0
-- cudnn 8.9.7
-- TensorRT 8.6.1
+- Ubuntu 24.04.4 LTS
+- Nvidia driver version 570, Cuda 12.8
+- nvcc (NVIDIA Cuda compiler driver) : Cuda compilation tools, release 12.8, V12.8.93 Build cuda_12.8.r12.8/compiler.35583870_0
+- TensorRT 10.9
 
 
 To ensure a consistent environment for all users, this project uses a Conda environment defined in a `inference_env.yml` file. Follow these steps to set up your environment:
@@ -79,21 +78,17 @@ I wish you good luck for the installation.
 
 Here is an example command to install PyTorch with CUDA support:
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
+```
+7. **Install TensorRT:** Follow this [link](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/installing.html#).
+
+8. **Install other python packages:**
+```bash
+pip install tensorrt cuda-python onnx onnx-graphsurgeon 
 ```
 
-7. **Install cuda-python:** Follow this [link](https://nvidia.github.io/cuda-python/install.html).
-
-8. **Install cudnn:** Follow this [link](https://developer.nvidia.com/cudnn).
-
-9. **Install TensorRT:** Follow this [link](https://developer.nvidia.com/tensorrt/download).
 
 For understand cuda installation : https://stackoverflow.com/questions/53422407/different-cuda-versions-shown-by-nvcc-and-nvidia-smi
-
-10. **Optimum:** To use optimum you have to install onnxruntime_gpu but it has a special version if cuda > 12.1 use this [link](https://onnxruntime.ai/docs/install/)
-```bash
-pip install onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ 
-```
 
 
 ## Usage

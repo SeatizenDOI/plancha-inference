@@ -3,6 +3,7 @@ import traceback
 from tqdm import tqdm
 from pathlib import Path
 from datetime import datetime
+from argparse import ArgumentParser, Namespace
 
 from utils.capture_images import CaptureImages
 from utils.savers import JacquesPredictions, MultilabelPredictions
@@ -10,15 +11,13 @@ from utils.libs.predictions_raster_tools import create_rasters_for_classes
 from utils.jacques_predictor import JacquesPredictor, JacquesPredictorGPU, JacquesCSV
 from utils.multilabel_classifier import MultiLabelClassifierCUDA, MultiLabelClassifierTRT
 
-from utils.libs.common_cuda import cuda_initialisation
 from utils.libs.parse_opt import Sources, get_list_sessions
 from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
 
-def parse_args():
-    import argparse
+def parse_args() -> Namespace:
 
     # Parse command line arguments.
-    ap = argparse.ArgumentParser(description="Seatizen inference", epilog="Thanks to use it!")
+    ap = ArgumentParser(description="Seatizen inference", epilog="Thanks to use it!")
 
     # Input.
     arg_input = ap.add_mutually_exclusive_group(required=True)
@@ -54,14 +53,11 @@ def parse_args():
 
     return ap.parse_args()
 
-def pipeline_seatizen(opt):
+def pipeline_seatizen(opt: Namespace):
     print("\n-- Parse input options", end="\n\n")
     
     batch_size = int(opt.batch_size) if opt.batch_size.isnumeric() else 1
     min_prediction = int(opt.min_prediction) if opt.min_prediction.isnumeric() else 100
-
-    # Load correct cuda initializer
-    cuda_initialisation(opt)
 
     print("\n-- Load the pipeline ...", end="\n\n")
 

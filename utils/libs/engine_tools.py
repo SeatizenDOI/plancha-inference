@@ -1,7 +1,7 @@
 import numpy as np
 import tensorrt as trt
 
-from .common_cuda import allocate_buffers, do_inference_v2
+from .common_cuda import allocate_buffers, do_inference
 
 logger = trt.Logger(trt.Logger.WARNING)
 
@@ -66,4 +66,4 @@ class NeuralNetworkGPU:
 
     def detect(self, images): 
         np.copyto(self.inputs[0].host, images.flatten())
-        return do_inference_v2(self.context, self.bindings, self.inputs, self.outputs, self.stream)
+        return do_inference(self.context, self.engine, self.bindings, self.inputs, self.outputs, self.stream)

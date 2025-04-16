@@ -6,7 +6,7 @@ from transformers import AutoImageProcessor
 from .pipeline import Pipeline
 from .libs.tools import sigmoid
 from .libs.engine_tools import NeuralNetworkGPU
-from .libs.multilabel_model import NewHeadDinoV2ForImageClassification, getDynoConfig, getThreshold, get_multilabel_engine
+from .libs.multilabel_model import NewHeadDinoV2ForImageClassification, getDynoConfig, get_threshold, get_multilabel_engine
 
 
 class MultiLabelClassifier(Pipeline):
@@ -14,10 +14,10 @@ class MultiLabelClassifier(Pipeline):
     def __init__(self, repo_name, batch_size):
         super(MultiLabelClassifier).__init__()
 
-        self.image_processor = AutoImageProcessor.from_pretrained(repo_name)
+        self.image_processor = AutoImageProcessor.from_pretrained(repo_name, use_fast=True)
         self.config = getDynoConfig(repo_name)
         self.classes_name = list(self.config["label2id"].keys())
-        self.threshold = getThreshold(repo_name)
+        self.threshold = get_threshold(repo_name)
         self.batch_size = batch_size
 
     def applyThreshold(self, scores):

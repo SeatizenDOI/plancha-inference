@@ -65,7 +65,7 @@ def load_checkpoint(model, checkpoint_name):
     if not Path.exists(folder_checkpoint) or not Path.is_dir(folder_checkpoint):
         download_checkpoint(checkpoint_name, folder_checkpoint)
 
-    checkpoint_loaded = torch.load(Path(folder_checkpoint, "epoch"), map_location='cuda:0' if torch.cuda.is_available() else 'cpu')
+    checkpoint_loaded = torch.load(Path(folder_checkpoint, "epoch"), map_location='cuda:0' if torch.cuda.is_available() else 'cpu', weights_only=True)
     
     new_state_dict = OrderedDict()
     for k, v in checkpoint_loaded['state_dict'].items():
@@ -75,10 +75,10 @@ def load_checkpoint(model, checkpoint_name):
 
     return model
 
-def download_checkpoint(checkpoint_name, folder_checkpoint):
+def download_checkpoint(checkpoint_name, folder_checkpoint: Path):
     print("\n-- Download checkpoint for jacques model")
 
-    with Popen(["zenodo_get", "-o", folder_checkpoint, checkpoint_name], stdout=PIPE, bufsize=1, universal_newlines=True) as p:
+    with Popen(["zenodo_get", "-o", str(folder_checkpoint), checkpoint_name], stdout=PIPE, bufsize=1, universal_newlines=True) as p:
         for line in p.stdout:
             print(line, end='')
 
