@@ -1,4 +1,5 @@
 <p align="center">
+  <a href="https://doi.org/10.5281/zenodo.15228534"><img src="https://zenodo.org/badge/790058279.svg" alt="DOI"></a>
   <a href="https://github.com/SeatizenDOI/plancha-inference/graphs/contributors"><img src="https://img.shields.io/github/contributors/SeatizenDOI/plancha-inference" alt="GitHub contributors"></a>
   <a href="https://github.com/SeatizenDOI/plancha-inference/network/members"><img src="https://img.shields.io/github/forks/SeatizenDOI/plancha-inference" alt="GitHub forks"></a>
   <a href="https://github.com/SeatizenDOI/plancha-inference/issues"><img src="https://img.shields.io/github/issues/SeatizenDOI/plancha-inference" alt="GitHub issues"></a>
