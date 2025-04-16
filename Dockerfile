@@ -19,8 +19,9 @@ RUN apt-get update && \
     matplotlib==3.10.1 \
     geocube==0.7.1 \
     huggingface_hub==0.30.2 \
-    natsort==8.4.0 && \
-    pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128 && \
+    natsort==8.4.0 \
+    torch==2.6.0 \ 
+    torchvision==0.21.0 && \
     useradd -ms /bin/bash seatizen
 
 # Add local directory.

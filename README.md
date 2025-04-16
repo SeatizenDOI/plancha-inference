@@ -38,8 +38,6 @@ The METADATA folder will also have two additional files, which are the predictio
 
 ## Installation
 
-***This installation guide was written a few months after the actual installation and has not yet been tested.***
-
 All the sessions was proceed on this hardware (Dell Precision 7770):
 
 - Intel Core i9-12950HX
@@ -53,10 +51,10 @@ And the software was :
 - nvcc (NVIDIA Cuda compiler driver) : Cuda compilation tools, release 12.8, V12.8.93 Build cuda_12.8.r12.8/compiler.35583870_0
 - TensorRT 10.9
 
-
-To ensure a consistent environment for all users, this project uses a Conda environment defined in a `inference.yml` file. Follow these steps to set up your environment:
+To ensure a consistent environment for all users, this project uses a Conda environment defined in a `inference.yml` file. Follow these steps to set up your environment.
 
 I wish you good luck for the installation.
+
 
 1. **Setup Nvidia Driver:** Please install your [nvidia driver](https://www.nvidia.com/fr-fr/drivers/unix/).
 
@@ -80,9 +78,14 @@ Here is an example command to install PyTorch with CUDA support:
 ```bash
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
 ```
-7. **Install TensorRT:** Follow this [link](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/installing.html#).
 
-8. **Install other python packages:**
+⚠️ Note: At this point, you can already use the repository without TensorRT acceleration.
+You do not need to install TensorRT or use -jtrt / -mltrt arguments unless you want to speed up inference.
+
+
+7. **(Optionnal) Install TensorRT:** Follow this [link](https://docs.nvidia.com/deeplearning/tensorrt/latest/installing-tensorrt/installing.html#).
+
+8. **(Optional) Install additional packages for TensorRT usage:**
 ```bash
 pip install tensorrt cuda-python onnx onnx-graphsurgeon 
 ```
@@ -118,16 +121,17 @@ You can specify the paths to the files or folders to be used as input:
 ### Jacques model parameters
 
 * `-jcku`, `--jacques_checkpoint_url`: default="20240513_v20.0", Specified which checkpoint file to used, if checkpoint file is not found we downloaded it from zenodo. 
-* `-jgpu`, `--jacques_gpu`: Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference
+* `-jtrt`, `--jacques_trt`: Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference
 * `-jcsv`, `--jacques_csv`: Used csv file of jacques predictions
 * `-nj`, `--no_jacques`: Didn't used jacques model
 
 ### Mulilabel model parameters
 
 * `-mlu`, `--multilabel_url`: Hugging face repository. Default : lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze
-* `-mlgpu`, `--multilabel_gpu`: Speedup inference with tensorrt
+* `-mltrt`, `--multilabel_trt`: Speedup inference with tensorrt
 * `-nml`, `--no_multilabel`: Didn't used multilabel model
 
+❗ You can safely omit -jtrt and -mltrt if you do not want to use TensorRT. The inference will still work using regular PyTorch execution.
 
 ### Optional Arguments
 
@@ -146,7 +150,7 @@ The script also includes optional arguments to fine-tune its behavior:
 
 An example of command to process. We process a folder of session using tensorrt to speedup inference and we clean old predictions files.
 ```bash
-python inference.py -efol -pfol /path/to/my/folder -mlgpu -jgpu -c
+python inference.py -efol -pfol /path/to/my/folder -mltrt -jtrt -c
 ```
 
 ## Contributing

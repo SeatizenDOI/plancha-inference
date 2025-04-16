@@ -29,13 +29,13 @@ def parse_args() -> Namespace:
 
     # Choose how to used jacques model.
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
-    ap.add_argument("-jgpu", "--jacques_gpu", action="store_true", help="Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference")
+    ap.add_argument("-jtrt", "--jacques_trt", action="store_true", help="Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference")
     ap.add_argument("-jcsv", "--jacques_csv", action="store_true", help="Used csv file of jacques predictions")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
     
     # Choose how to used multilabel model.
     ap.add_argument("-mlu", "--multilabel_url", default="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze", help="Hugging face repository")
-    ap.add_argument("-mlgpu", "--multilabel_gpu", action="store_true", help="Speedup inference with tensorrt")
+    ap.add_argument("-mltrt", "--multilabel_trt", action="store_true", help="Speedup inference with tensorrt")
     ap.add_argument("-nml", "--no_multilabel", action="store_true", help="Didn't used multilabel model")
 
     # Optional arguments.
@@ -66,7 +66,7 @@ def pipeline_seatizen(opt: Namespace):
 
     if opt.no_jacques:
         jacques_model = None 
-    elif opt.jacques_gpu:
+    elif opt.jacques_trt:
         try:
             from src.tensorrt_boost.jacques_predictor import JacquesPredictor
         except ImportError as e:
@@ -88,7 +88,7 @@ def pipeline_seatizen(opt: Namespace):
     multilabel_model = None 
     if opt.no_multilabel:
         multilabel_model = None 
-    elif opt.multilabel_gpu:
+    elif opt.multilabel_trt:
         try:
             from src.tensorrt_boost.multilabel_classifier import MultiLabelClassifier
         except ImportError as e:
