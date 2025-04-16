@@ -1,14 +1,11 @@
 import torch
-import numpy as np
 import pandas as pd
 from pathlib import Path
 
-from .pipeline import Pipeline
-from .libs.engine_tools import NeuralNetworkGPU
-from .libs.tools import sigmoid, get_image_transformation
-from .libs.jacques_model import build_jacques_model, get_jacques_engine_name
+from ..base.pipeline import Pipeline
+from ..base.jacques_model_base import JACQUES_THRESHOLD, build_jacques_model
+from ..base.tools import get_image_transformation
 
-JACQUES_THRESHOLD = 0.306
 
 class JacquesPredictor(Pipeline):
     """Pipeline for jacques predictor. Jacques sort image in useless/useful classes"""
@@ -53,43 +50,6 @@ class JacquesPredictor(Pipeline):
         """ nothing to release """
         pass
 
-class JacquesPredictorGPU(Pipeline):
-    """Pipeline for jacques predictor. Jacques sort image in useless/use classes"""
-
-    def __init__(self, checkpoint, batch_size):
-        super(JacquesPredictorGPU).__init__()
-        
-        self.batch_size = batch_size
-        self.model = NeuralNetworkGPU(get_jacques_engine_name(checkpoint, batch_size))
-        self.transform = get_image_transformation()
-    
-    def generator(self):
-        """Yields the image enriched with jacques predictions"""
-        
-        data = None
-        stop = False
-        while self.has_next() and not stop:
-            try:
-                # Buffer the pipeline stream.
-                data = next(self.source)
-            except StopIteration:
-                stop = True
-
-            if not stop and data:
-                images = [(self.transform(frame)[None, :]).numpy() for frame in data["frames"]]
-
-                outputs = np.split(self.model.detect(np.stack(images))[0], self.batch_size)
-                data["Useless"], data["prob_jacques"] = [], []
-                for output in outputs:
-                    prob = sigmoid(output)[0]
-                    data["Useless"].append(1 if prob > JACQUES_THRESHOLD else 0)
-                    data["prob_jacques"].append(prob)
-
-            yield data
-
-    def cleanup(self):
-        """ nothing to release """
-        pass
 
 class JacquesCSV(Pipeline):
     """Pipeline for jacques csv file. Used csv file to get annotate"""

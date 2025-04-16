@@ -5,14 +5,11 @@ from pathlib import Path
 from datetime import datetime
 from argparse import ArgumentParser, Namespace
 
-from utils.capture_images import CaptureImages
-from utils.savers import JacquesPredictions, MultilabelPredictions
-from utils.libs.predictions_raster_tools import create_rasters_for_classes
-from utils.jacques_predictor import JacquesPredictor, JacquesPredictorGPU, JacquesCSV
-from utils.multilabel_classifier import MultiLabelClassifierCUDA, MultiLabelClassifierTRT
-
-from utils.libs.parse_opt import Sources, get_list_sessions
-from utils.libs.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
+from src.base.capture_images import CaptureImages
+from src.base.parse_opt import Sources, get_list_sessions
+from src.base.savers import JacquesPredictions, MultilabelPredictions
+from src.base.predictions_raster_tools import create_rasters_for_classes
+from src.base.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
 
 def parse_args() -> Namespace:
 
@@ -66,23 +63,45 @@ def pipeline_seatizen(opt: Namespace):
 
     # Load jacques model.
     jacques_model = None 
+
     if opt.no_jacques:
-        jacques_model = None
-    elif opt.jacques_csv:
-        jacques_model = JacquesCSV()
+        jacques_model = None 
     elif opt.jacques_gpu:
-        jacques_model = JacquesPredictorGPU(opt.jacques_checkpoint_url, batch_size)
-    else:
+        try:
+            from src.tensorrt_boost.jacques_predictor import JacquesPredictor
+        except ImportError as e:
+            print(e)
+            return
         jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
+    else:
+        try:
+            from src.normal_gpu.jacques_predictor import JacquesPredictor, JacquesCSV
+        except ImportError as e:
+            print(e)
+            return
+        if opt.jacques_csv:
+            jacques_model = JacquesCSV()
+        else:
+            jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
 
     # Load Hugging face model.
     multilabel_model = None 
     if opt.no_multilabel:
         multilabel_model = None 
     elif opt.multilabel_gpu:
-        multilabel_model = MultiLabelClassifierTRT(opt.multilabel_url, batch_size)
+        try:
+            from src.tensorrt_boost.multilabel_classifier import MultiLabelClassifier
+        except ImportError as e:
+            print(e)
+            return
+        multilabel_model = MultiLabelClassifier(opt.multilabel_url, batch_size)
     else:
-        multilabel_model = MultiLabelClassifierCUDA(opt.multilabel_url, batch_size)
+        try:
+            from src.normal_gpu.multilabel_classifier import MultiLabelClassifier
+        except ImportError as e:
+            print(e)
+            return
+        multilabel_model = MultiLabelClassifier(opt.multilabel_url, batch_size)
 
     # Annotage images.
     jacques_savers = None if opt.no_jacques or opt.jacques_csv else JacquesPredictions()

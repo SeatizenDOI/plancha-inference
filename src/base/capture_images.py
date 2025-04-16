@@ -2,7 +2,7 @@ from PIL import Image
 from natsort import natsorted
 
 from .pipeline import Pipeline
-from .libs.load_images import load_frames_from_source
+from .load_images import load_frames_from_source
 
 class CaptureImages(Pipeline):
     """Pipeline task to extract image from source"""

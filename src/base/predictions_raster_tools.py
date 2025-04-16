@@ -10,8 +10,6 @@ from scipy.interpolate import griddata
 from scipy.spatial import ConvexHull
 from matplotlib.path import Path
 
-
-
 def haversine(point1, point2):
     """Calculate the Haversine distance between two geographic points."""
     R = 6371000  # Earth radius in meters

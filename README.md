@@ -54,7 +54,7 @@ And the software was :
 - TensorRT 10.9
 
 
-To ensure a consistent environment for all users, this project uses a Conda environment defined in a `inference_env.yml` file. Follow these steps to set up your environment:
+To ensure a consistent environment for all users, this project uses a Conda environment defined in a `inference.yml` file. Follow these steps to set up your environment:
 
 I wish you good luck for the installation.
 
@@ -64,9 +64,9 @@ I wish you good luck for the installation.
 
 3. **Install Conda:** If you do not have Conda installed, download and install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/products/distribution).
 
-4. **Create the Conda Environment:** Navigate to the root of the project directory and run the following command to create a new environment from the `inference_env.yml` file:
+4. **Create the Conda Environment:** Navigate to the root of the project directory and run the following command to create a new environment from the `inference.yml` file:
    ```bash
-   conda env create -f inference_env.yml
+   conda env create -f inference.yml
    ```
 
 5. **Activate the Environment:** Once the environment is created, activate it using:

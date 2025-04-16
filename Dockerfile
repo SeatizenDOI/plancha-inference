@@ -1,15 +1,27 @@
-FROM nvcr.io/nvidia/tensorrt:23.12-py3
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim-bullseye
 
-# Refresh apt && Create user && Setup python with tensorrt and install all dependencies.
+# Install lib, create user.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    useradd -ms /bin/bash seatizen && \ 
-    /opt/tensorrt/python/python_setup.sh && \ 
-    pip install --no-cache-dir numpy natsort transformers pandas pillow tqdm zenodo_get \
-    pypdf reportlab cartopy scipy matplotlib geocube huggingface_hub && \
-    pip3 install --no-cache-dir torch torchvision \
-    torchaudio --index-url https://download.pytorch.org/whl/cu124
+    pip install --no-cache-dir \
+    numpy==2.2.4 \
+    natsort==8.4.0 \
+    transformers==4.51.3 \
+    pandas==2.2.3 \
+    pillow==11.2.1 \
+    tqdm==4.67.1 \
+    zenodo_get==1.6.1 \
+    pypdf==5.4.0 \
+    reportlab==4.3.1 \
+    cartopy==0.24.1 \
+    scipy==1.15.2 \
+    matplotlib==3.10.1 \
+    geocube==0.7.1 \
+    huggingface_hub==0.30.2 \
+    natsort==8.4.0 && \
+    pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128 && \
+    useradd -ms /bin/bash seatizen
 
 # Add local directory.
 ADD --chown=seatizen ../. /home/seatizen/app/
