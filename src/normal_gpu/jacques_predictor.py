@@ -10,7 +10,7 @@ from ..base.tools import get_image_transformation
 class JacquesPredictor(Pipeline):
     """Pipeline for jacques predictor. Jacques sort image in useless/useful classes"""
 
-    def __init__(self, checkpoint, batch_size):
+    def __init__(self, checkpoint: str, batch_size: int):
         super(JacquesPredictor).__init__()
         self.model = build_jacques_model(checkpoint)
         self.transform = get_image_transformation()
@@ -58,9 +58,9 @@ class JacquesCSV(Pipeline):
         super(JacquesCSV).__init__()
         self.filename, self.df = None, None       
     
-    def setup(self, filename):
-        self.filename = Path(filename)
-        if not Path.exists(self.filename):
+    def setup(self, filename: Path):
+        self.filename = filename
+        if not self.filename.exists():
             raise "Jacques csv file doesn't exist"
         self.df = pd.read_csv(self.filename)
 

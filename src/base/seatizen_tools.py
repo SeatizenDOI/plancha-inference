@@ -1,11 +1,13 @@
 """
     All functions is taken from seatizen-to-zenodo repository. Except predictions map
     https://github.com/IRDG2OI/seatizen-to-zenodo
+
+    Edit: Add typing.
 """
 
-import os
 import tqdm
 import time
+import shutil
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -28,14 +30,7 @@ from cartopy.io.img_tiles import GoogleTiles
 
 COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]
 
-def list_directories(path):
-    '''
-    Function that only list the directories located at the specified path.
-    '''
-    directories = [os.path.join(path, entry) for entry in os.listdir(path) if os.path.isdir(os.path.join(path, entry))]
-    return directories
-
-def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
+def join_GPS_metadata(annotation_csv_path: Path, metadata_path: Path, merged_csv_path: Path):
     '''
     Function to merge multilabel annotations csv with GPS metadata (latitude, longitude and date)
     '''
@@ -62,7 +57,7 @@ def join_GPS_metadata(annotation_csv_path, metadata_path, merged_csv_path):
     
     merged_df.to_csv(merged_csv_path, index=False, header=True)
 
-def evenly_select_images_on_interval(image_list):
+def evenly_select_images_on_interval(image_list: list) -> list:
     '''
     Function to select images evenly throughout a list based on their indexes.
     '''
@@ -71,69 +66,45 @@ def evenly_select_images_on_interval(image_list):
     selected_images = [image_list[i] for i in index_list]
     return selected_images
 
-def create_trajectory_map(metadata_path, global_trajectories, alpha3_code):
+def create_trajectory_map(metadata_path: Path, alpha3_code: str) -> Path | None:
     '''
     Function to create the trajectory maps.
     - metadata_path is the path to the metadata.csv file or the metadata_image.csv file.
-    - global_trajectories is a boolean to indicate if you are doing the global trajectory map or not.
     - alpha3_code country code
     Return True if image was generated else False
     '''
     df = pd.read_csv(metadata_path)
     if "GPSLatitude" not in df or "GPSLongitude" not in df:
         print("[ERROR] Not enough gps information to draw trajectory map")
-        return False
+        return None
 
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
-    if not global_trajectories:
-        fig = plt.figure(figsize=(2,2), dpi=300)
-        ax = fig.add_subplot(projection=ccrs.PlateCarree())
-        map_path = "/tmp/map.png"
-        if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL:
-            ax.set_extent([df.GPSLongitude.min()-0.001, df.GPSLongitude.max()+0.001, df.GPSLatitude.min()-0.001,df.GPSLatitude.max()+0.001])
-            ax.add_image(imagery, 19)
-            ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.3)
-        else: # other positions
-            ax.set_extent([df.GPSLongitude.min()-0.005, df.GPSLongitude.max()+0.005, df.GPSLatitude.min()-0.005,df.GPSLatitude.max()+0.005])
-            ax.add_image(imagery, 17) # aldabra/mayotte position so we adjust the zoom level
-            ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.1)
-    else: # global trajectories map
-        df['GPSDateTime'] = pd.to_datetime(df['GPSDateTime'])
-        df['SubSecDateTimeOriginal'] = pd.to_datetime(df['SubSecDateTimeOriginal'], format="%Y:%m:%d %H:%M:%S.%f")
-        df['Date'] = df['GPSDateTime'].fillna(df['SubSecDateTimeOriginal'])
-        df['Date'] = df['Date'].dt.strftime('%Y-%m-%d')
-
-        fig = plt.figure(figsize=(10,10), dpi=600)
-        ax = fig.add_subplot(projection=ccrs.PlateCarree())
-        ax.set_extent([df.GPSLongitude.min()-1, df.GPSLongitude.max()+1, df.GPSLatitude.min()-1,df.GPSLatitude.max()+1])
+    fig = plt.figure(figsize=(2,2), dpi=300)
+    ax = fig.add_subplot(projection=ccrs.PlateCarree())
+    map_path = Path(metadata_path.parent, "map.png")
+    if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL:
+        ax.set_extent([df.GPSLongitude.min()-0.001, df.GPSLongitude.max()+0.001, df.GPSLatitude.min()-0.001,df.GPSLatitude.max()+0.001])
         ax.add_image(imagery, 19)
-
-        # drawing trajectories for each session based on their associated dates
-        for date in df["Date"].unique():
-            subset = df[df['Date'] == date]
-            ax.plot(subset.GPSLongitude, subset.GPSLatitude, color='yellow', linewidth=5)
-        # saving the map in the same folder as metadata_image.csv
-        map_path = os.path.join(os.path.dirname(metadata_path), "000_global_map.png")
-
+        ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.3)
+    else: # other positions
+        ax.set_extent([df.GPSLongitude.min()-0.005, df.GPSLongitude.max()+0.005, df.GPSLatitude.min()-0.005,df.GPSLatitude.max()+0.005])
+        ax.add_image(imagery, 17) # aldabra/mayotte position so we adjust the zoom level
+        ax.plot(df.GPSLongitude, df.GPSLatitude, color='tab:grey', linewidth=0.1)
+    
     fig.savefig(map_path, bbox_inches='tight',pad_inches=0, dpi=300)
     print("Trajectory map created!")
-    return True
+    return map_path
 
 def get_cmap(n, name='hsv'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
 
-def create_predictions_map(predictions_path, classes, alpha3_code):
-    """
-        Create a folder of map for each predictions.
-        - predictions_path is the path to predictions file
-        
-        return the folder path to the images 
-    """
-    predictions_path = Path(predictions_path)
-    if not Path.exists(predictions_path):
+def create_predictions_map(predictions_path: Path, classes: list, alpha3_code: str) -> Path | None:
+    """ Create a folder of map for each predictions. """
+
+    if not predictions_path.exists():
         print(f"File {predictions_path} doesn't exist")
         return
 
@@ -145,11 +116,11 @@ def create_predictions_map(predictions_path, classes, alpha3_code):
     imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
 
     # Create temp directory
-    tmp_path = Path(f"/tmp/pred_{int(time.time())}_jpg")
+    tmp_path = Path(predictions_path.parent, f"pred_{int(time.time())}_jpg")
+    if tmp_path.exists():
+        shutil.rmtree(tmp_path)
     tmp_path.mkdir(parents=True, exist_ok=True)
-    if len(list(tmp_path.iterdir())) > 0:
-        for i in tmp_path.iterdir():
-            i.unlink()
+
     
     cmap = get_cmap(len(classes))
     for i, category in tqdm.tqdm(enumerate(classes)):
@@ -166,7 +137,7 @@ def create_predictions_map(predictions_path, classes, alpha3_code):
 
     return tmp_path
 
-def get_uselful_images(frames_path_list, jacques_predictions):
+def get_uselful_images(frames_path_list: list, jacques_predictions: Path) -> list:
 
     list_frames_useful = []
     df_jacques = pd.read_csv(jacques_predictions)
@@ -180,7 +151,7 @@ def get_uselful_images(frames_path_list, jacques_predictions):
 
     return list_frames_useful
 
-def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_path, prediction_gps_path, classes):
+def create_pdf_preview(session: Path, list_of_images: list, metadata_path: Path, prediction_gps_path: Path, classes: list):
     '''
     Function to create a pdf preview of the session. It will contains:
     - a trajectory map
@@ -189,28 +160,30 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
     '''
 
     # PDF creation
-    pdf_file = os.path.join(pdf_preview_path, f"000_{session_name}_preview.pdf")
-    c = canvas.Canvas(pdf_file, pagesize=letter)
+    pdf_file = Path(session, f"000_{session.name}_preview.pdf")
+    c = canvas.Canvas(str(pdf_file), pagesize=letter)
     page_width, page_height = letter
     max_height = page_height - 100
-    alpha3_code = session_name.split("_")[1].split("-")[0] # Extract MUS from 20221011_MUS-Lemorne_scuba_1
+    alpha3_code = session.name.split("_")[1].split("-")[0] # Extract MUS from 20221011_MUS-Lemorne_scuba_1
 
     c.setFont("Helvetica-Bold", 14)
     c.drawString(30, 730, "Session Summary")
     c.setFont("Helvetica-Bold", 18)
     c.setFillColor(colors.blue)
-    c.drawString(30, 705, session_name)
+    c.drawString(30, 705, session.name)
 
     # Trajectory map
     img_preview_y = 730
-    if create_trajectory_map(metadata_path, False, alpha3_code):
+    map_path = create_trajectory_map(metadata_path, alpha3_code)
+
+    if map_path != None and map_path.exists():
         print("Adding map to the PDF...")
-        image_map = Image.open("/tmp/map.png")
+        image_map = Image.open(map_path)
         image_map_width, image_map_height = image_map.size
         x = (page_width - image_map_width) / 2
         y = (page_height - image_map_height) / 2
-        c.drawImage("/tmp/map.png", x, y)
-        os.remove("/tmp/map.png") # deleting map.png
+        c.drawImage(map_path, x, y)
+        map_path.unlink()
 
         c.setFont("Helvetica-Bold", 16)
         c.setFillColor(colors.black)
@@ -242,7 +215,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
 
         img_width, img_height = img.size
 
-        temp_image_path = os.path.join(pdf_preview_path, f'temp_{i}.jpg')
+        temp_image_path = Path(session, f'temp_{i}.jpg')
         img.save(temp_image_path)
 
         if y_coord - img_height < 50:
@@ -251,7 +224,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
 
         c.drawImage(temp_image_path, x_coord, y_coord - img_height)
 
-        os.remove(temp_image_path)
+        temp_image_path.unlink()
 
         x_coord += 110
 
@@ -311,7 +284,7 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
         pdf_predictions_path = Path(img_folder_predictions_path, "temp.pdf")
         pred_images_path = [img_name for img_name in natsorted(list(img_folder_predictions_path.iterdir())) if img_name.suffix.lower() == ".jpg"]
 
-        images = [ Image.open(f) for f in pred_images_path ]
+        images = [Image.open(f) for f in pred_images_path]
         images[0].save(
             pdf_predictions_path, "PDF" ,resolution=200.0, save_all=True, append_images=images[1:]
         )
@@ -324,32 +297,30 @@ def create_pdf_preview(pdf_preview_path, session_name, list_of_images, metadata_
         merger.close()
 
         # Delete tmp folder
-        for file in Path(img_folder_predictions_path).iterdir():
-            file.unlink()
-        img_folder_predictions_path.rmdir()
+        shutil.rmtree(img_folder_predictions_path)
+  
     print("PDF created!")
 
-def check_and_remove_predictions_files_if_necessary(session_path, predictions_gps, predictions_scores_gps, min_prediction):
+def check_and_remove_predictions_files_if_necessary(session_path: Path, predictions_gps: Path, predictions_scores_gps: Path, min_prediction: int) -> bool:
     """ Remove all predictions stuff if we don't have enough predictions """
-    if Path.exists(predictions_gps):
+    
+    if predictions_gps.exists():
         predictions_gps_df = pd.read_csv(predictions_gps)
         if len(predictions_gps_df) > min_prediction: return False
     
     # If we reached this point, we don't have enough predictions so we delete all.
-    if Path.exists(predictions_gps):
-        Path(predictions_gps).unlink()
+    if predictions_gps.exists():
+        predictions_gps.unlink()
     
-    if Path.exists(predictions_scores_gps):
-        Path(predictions_scores_gps).unlink()
+    if predictions_scores_gps.exists():
+        predictions_scores_gps.unlink()
     
     metadata_csv = Path(session_path, "METADATA", "metadata.csv")
-    if Path.exists(metadata_csv) and metadata_csv.is_file():
+    if metadata_csv.exists() and metadata_csv.is_file():
         metadata_csv.unlink()
     
     ia_folder = Path(session_path, "PROCESSED_DATA", "IA")
-    if Path.exists(ia_folder) and ia_folder.is_dir():
-        for file in ia_folder.iterdir():
-            file.unlink()
-        ia_folder.rmdir()
+    if ia_folder.exists() and ia_folder.is_dir():
+        shutil.rmtree(ia_folder)
 
     return True

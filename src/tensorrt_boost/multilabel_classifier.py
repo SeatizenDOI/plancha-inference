@@ -14,7 +14,7 @@ from .engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
 class MultiLabelClassifier(MultiLabelClassifierBase):
     """Multilabel classifier with TensorRt"""
 
-    def __init__(self, repo_name, batch_size):
+    def __init__(self, repo_name: str, batch_size: int):
         super().__init__(repo_name, batch_size)
 
         self.model = NeuralNetworkGPU(get_multilabel_engine(repo_name, batch_size))
@@ -51,7 +51,8 @@ class MultiLabelClassifier(MultiLabelClassifierBase):
                 yield data
     
 
-def get_multilabel_engine(repo_name, batch_size):
+def get_multilabel_engine(repo_name: str, batch_size: int) -> Path:
+    """ """
     path_to_multilabel_engine = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name, f"multilabel_bs_{batch_size}.engine")
     # Check for engine file.
     if Path.exists(path_to_multilabel_engine):
@@ -64,12 +65,12 @@ def get_multilabel_engine(repo_name, batch_size):
         build_onnx_file_for_multilabel(repo_name, path_to_multilabel_onnx, batch_size)
 
     print("-- Building multilabel engine file")
-    build_and_save_engine_from_onnx(str(path_to_multilabel_onnx), str(path_to_multilabel_engine))
+    build_and_save_engine_from_onnx(path_to_multilabel_onnx, path_to_multilabel_engine)
 
-    return str(path_to_multilabel_engine)
+    return path_to_multilabel_engine
 
 
-def build_onnx_file_for_multilabel(repo_name, path_to_multilabel_onnx, batch_size):
+def build_onnx_file_for_multilabel(repo_name: str, path_to_multilabel_onnx: Path, batch_size: int) -> None:
     model = NewHeadDinoV2ForImageClassification.from_pretrained(repo_name)
     image = Image.open(Path(Path.cwd(), "inputs/image_mutilabel_setup.jpeg"))
     image_processor = AutoImageProcessor.from_pretrained(repo_name)

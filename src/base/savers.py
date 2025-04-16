@@ -1,5 +1,5 @@
+from pathlib import Path
 from .pipeline import Pipeline
-
 class JacquesPredictions(Pipeline):
     """Pipeline task to save Jacques predictions"""
 
@@ -7,7 +7,7 @@ class JacquesPredictions(Pipeline):
         self.filename, self.csv_connector = None, None
         super(JacquesPredictions, self).__init__()
 
-    def setup(self, filename):
+    def setup(self, filename: Path):
         self.filename = filename
         self.csv_connector = open(self.filename, "w")
 
@@ -36,12 +36,12 @@ class JacquesPredictions(Pipeline):
 class  MultilabelPredictions(Pipeline):
     """Pipeline task to save Jacques predictions"""
 
-    def __init__(self, classes):
+    def __init__(self, classes: list):
         self.filename_pred, self.filename_scores, self.csv_connector_classes, self.csv_connector_scores = None, None, None, None
         self.classes = classes
         super(MultilabelPredictions, self).__init__()
     
-    def setup(self, filename_pred, filename_scores):
+    def setup(self, filename_pred: Path, filename_scores: Path):
         self.filename_pred = filename_pred
         self.filename_scores = filename_scores
         self.csv_connector_classes = open(self.filename_pred, "w")

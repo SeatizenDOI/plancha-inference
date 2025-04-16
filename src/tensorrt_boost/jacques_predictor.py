@@ -11,7 +11,7 @@ from .engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
 class JacquesPredictor(Pipeline):
     """Pipeline for jacques predictor. Jacques sort image in useless/use classes"""
 
-    def __init__(self, checkpoint, batch_size):
+    def __init__(self, checkpoint: str, batch_size: int):
         super(JacquesPredictor).__init__()
         
         self.batch_size = batch_size

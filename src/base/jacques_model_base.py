@@ -88,4 +88,8 @@ def download_checkpoint(checkpoint_name: str, folder_checkpoint: Path):
         if p.returncode != 0:
             raise CalledProcessError(p.returncode, p.args)
     
-    #! FIXME rename file to epoch
+    # Rename file to epoch.pth
+    for file in folder_checkpoint.iterdir():
+        if file.suffix.lower() == ".pth":
+            file.rename(Path(file.parent, "epoch.pth"))
+            break

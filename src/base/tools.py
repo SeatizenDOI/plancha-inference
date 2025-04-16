@@ -1,11 +1,11 @@
 import numpy as np
 from torchvision import transforms
 
-def sigmoid(_outputs):
+def sigmoid(_outputs: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-_outputs))
 
 
-def get_image_transformation():
+def get_image_transformation() -> transforms.Compose:
     return transforms.Compose([
         transforms.Resize(224),
         transforms.CenterCrop(224),

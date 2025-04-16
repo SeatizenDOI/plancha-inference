@@ -1,15 +1,14 @@
 import enum
 import pandas as pd
 from pathlib import Path
-
-from .seatizen_tools import list_directories
+from argparse import Namespace
 
 class Sources(enum.Enum):
     CSV_SESSION = 0
     FOLDER = 1
     SESSION = 2
 
-def get_mode_from_opt(opt) -> Sources:
+def get_mode_from_opt(opt: Namespace) -> Sources:
     """ Retrive mode from input option """
     mode = None
 
@@ -22,7 +21,7 @@ def get_mode_from_opt(opt) -> Sources:
 
     return mode
 
-def get_src_from_mode(mode, opt) -> str:
+def get_src_from_mode(mode: Sources, opt: Namespace) -> str:
     """ Retrieve src path from mode """
     src = ""
 
@@ -35,7 +34,7 @@ def get_src_from_mode(mode, opt) -> str:
 
     return src
 
-def get_list_sessions(opt) -> list:
+def get_list_sessions(opt: Namespace) -> list[Path]:
     """ Retrieve list of sessions from input """
 
     list_sessions = []
@@ -44,16 +43,16 @@ def get_list_sessions(opt) -> list:
     src = get_src_from_mode(mode, opt)
 
     if mode == Sources.SESSION:
-        list_sessions = [src]
+        list_sessions = [Path(src)]
 
     elif mode == Sources.FOLDER:
-        list_sessions = sorted(list_directories(src))
+        list_sessions = sorted([session for session in Path(src).iterdir() if session.is_dir()])
     
     elif mode == Sources.CSV_SESSION:
         src = Path(src)
         if Path.exists(src):
             df_ses = pd.read_csv(src)
-            list_sessions = [str(Path(row.root_folder, row.session_name)) for row in df_ses.itertuples(index=False)]
+            list_sessions = [Path(row.root_folder, row.session_name) for row in df_ses.itertuples(index=False)]
 
     return list_sessions
 

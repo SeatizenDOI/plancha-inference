@@ -1,11 +1,12 @@
 import numpy as np
 import tensorrt as trt
+from pathlib import Path
 
 from .common_cuda import allocate_buffers, do_inference
 
 logger = trt.Logger(trt.Logger.WARNING)
 
-def build_and_save_engine_from_onnx(path_onnx, path_engine):
+def build_and_save_engine_from_onnx(path_onnx: Path, path_engine: Path):
     # 1 - Build Phase
 
     # 1.1 - Logs all message in stdout and create a builder.
@@ -17,7 +18,7 @@ def build_and_save_engine_from_onnx(path_onnx, path_engine):
     # 1.1.2 - Import a model using ONNX parser.
     parser = trt.OnnxParser(network, logger)
 
-    succes = parser.parse_from_file(path_onnx)
+    succes = parser.parse_from_file(str(path_onnx))
     for idx in range(parser.num_errors):
         print(parser.get_error(idx))
 
@@ -40,12 +41,12 @@ def build_and_save_engine_from_onnx(path_onnx, path_engine):
         f.write(serialized_engine)
 
 
-def load_engine(path):    
+def load_engine(engine_path: Path):    
     # Deserialize the engine using the runtime interface.
     runtime = trt.Runtime(logger)
 
     # Load engine from file.
-    with open(path, 'rb') as f:
+    with open(engine_path, 'rb') as f:
         serialized_engine = f.read()
 
     # Deserialize from a memory buffer.
@@ -60,10 +61,10 @@ def load_engine(path):
     return engine, context
 
 class NeuralNetworkGPU:
-    def __init__(self, model_path):
+    def __init__(self, model_path: Path):
         self.engine, self.context = load_engine(model_path)
         self.inputs, self.outputs, self.bindings, self.stream = allocate_buffers(self.engine)
 
-    def detect(self, images): 
+    def detect(self, images: np.ndarray): 
         np.copyto(self.inputs[0].host, images.flatten())
         return do_inference(self.context, self.engine, self.bindings, self.inputs, self.outputs, self.stream)

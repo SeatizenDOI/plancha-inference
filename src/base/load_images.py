@@ -3,9 +3,9 @@ from pathlib import Path
 
 from .parse_opt import Sources
 
-def load_frames_from_source(src, mode):
+def load_frames_from_source(src: Path, mode: Sources) -> list[Path]:
     """ Returns to the correct import function"""
-    frames = None
+    frames = []
     
     if mode == Sources.CSV_SESSION:
         frames = load_frames_from_csv_session(src)
@@ -16,12 +16,11 @@ def load_frames_from_source(src, mode):
     
     return frames 
 
-def load_frames_from_csv_session(src):
+def load_frames_from_csv_session(src: Path)-> list[Path]:
     """ Import frames from a csv listing sessions """
-    src = Path(src)
 
     # Check if csv file exists.
-    if not Path.exists(src) or not Path.is_file(src):
+    if not src.exists() or not src.is_file():
         print(f"Path to file {src} doesn't exist.")
         return []
 
@@ -34,12 +33,11 @@ def load_frames_from_csv_session(src):
     print(f"Successfully load {len(frames)} images")
     return frames
 
-def load_frames_from_folder(src):
+def load_frames_from_folder(src: Path) -> list[Path]:
     """ Import frames from a folder of sessions """
-    src = Path(src)
 
     # Check if folder of sessions exists.
-    if not Path.exists(src) or not Path.is_dir(src):
+    if not src.exists() or not src.is_dir():
         print(f"Path to folder {src} doesn't exist.")
         return []
 
@@ -51,7 +49,7 @@ def load_frames_from_folder(src):
     print(f"Successfully load {len(frames)} images")
     return frames
 
-def load_frames_from_session(src):
+def load_frames_from_session(src: Path) -> list[Path]:
     """ Import frames from a single session """
     frames_path = []
 
@@ -72,7 +70,8 @@ def load_frames_from_session(src):
     # Iter on each file
     cpt_image, cpt_error = 0, 0
     for _, row in metadata_df.iterrows():
-        path_img = Path(Path(src).parent, *[x for x in row[relative_path_key].split("/") if x]) # Sometimes relative path start with /
+        path_img = Path(src.parent, *[x for x in row[relative_path_key].replace("\\", "/").split("/") if x]) # Sometimes relative path start with /
+
         cpt_image += 1
         # Check if it's a file and if ended with image extension
         if not path_img.exists() or not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):

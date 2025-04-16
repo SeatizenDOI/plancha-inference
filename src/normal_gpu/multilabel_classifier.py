@@ -7,7 +7,7 @@ from ..base.multilabel_model_base import MultiLabelClassifierBase, NewHeadDinoV2
 class MultiLabelClassifier(MultiLabelClassifierBase):
     """Multilabel classifier with cuda"""
 
-    def __init__(self, repo_name, batch_size):
+    def __init__(self, repo_name: str, batch_size: int):
         super().__init__(repo_name, batch_size)
 
         self.model = NewHeadDinoV2ForImageClassification.from_pretrained(repo_name)

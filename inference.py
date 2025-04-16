@@ -122,35 +122,31 @@ def pipeline_seatizen(opt: Namespace):
 
     for session in sessions:
 
-        session_name = Path(session).name
         jacques_model_name = opt.jacques_checkpoint_url.replace("/", "_")
-        print(f"\nLaunched session {session_name}\n\n")
+        print(f"\nLaunched session {session.name}\n\n")
 
         # Clean sessions if needed
+        path_IA = Path(session, "PROCESSED_DATA/IA")
         if opt.clean:
             print("\t-- Clean session \n\n")
             # Clean PROCESSED_DATA/IA folder
-            path_IA = Path(session, "PROCESSED_DATA/IA")
-            if Path.exists(path_IA):
+            if path_IA.exists():
                 shutil.rmtree(path_IA)
-            path_IA.mkdir(exist_ok=True, parents=True)
 
             # Delete preview file
-            for file in Path(session).iterdir():
+            for file in session.iterdir():
                 if file.is_file() and file.suffix.lower() == ".pdf":
                     file.unlink()
-        else:
-            path_IA = Path(session, "PROCESSED_DATA/IA")
-            path_IA.mkdir(exist_ok=True, parents=True)
+        path_IA.mkdir(exist_ok=True, parents=True)
 
-        jacques_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
-        multilabel_pred_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}.csv")
-        multilabel_scores_csv_name = Path(session, "PROCESSED_DATA/IA", f"{session_name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
+        jacques_csv_name = Path(path_IA, f"{session.name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
+        multilabel_pred_csv_name = Path(path_IA, f"{session.name}_{opt.multilabel_url.replace('/', '_')}.csv")
+        multilabel_scores_csv_name = Path(path_IA, f"{session.name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
 
         metadata_csv_name = Path(session, "METADATA/metadata.csv")
         if not Path.exists(metadata_csv_name):
-            print(f"[ERROR] Session {session_name} doesn't have a metadata file.")
-            sessions_fail.append(session_name)
+            print(f"[ERROR] Session {session.name} doesn't have a metadata file.")
+            sessions_fail.append(session.name)
             continue
 
         # Setup pipeline for current session
@@ -212,19 +208,19 @@ def pipeline_seatizen(opt: Namespace):
             
             # Add preview pdf
             print("\t-- Create pdf preview \n\n") # TODO Add bathy preview in global pdf
-            create_pdf_preview(session, session_name, useful_images, metadata_csv_name, predictions_gps, multilabel_model.classes_name)
+            create_pdf_preview(session, useful_images, metadata_csv_name, predictions_gps, multilabel_model.classes_name)
 
             # Create raster predictions
             print("\t-- Creating raster for each class \n\n")
             if not opt.no_prediction_raster:
-                create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session_name, 'linear')
+                create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session.name, 'linear')
             
-            print(f"\nSession {session_name} end succesfully ! ", end="\n\n\n")
+            print(f"\nSession {session.name} end succesfully ! ", end="\n\n\n")
 
         except Exception:
             print(traceback.format_exc(), end="\n\n")
 
-            sessions_fail.append(session_name)
+            sessions_fail.append(session.name)
     
     # Stat
     print("\nEnd of process. On {} sessions, {} fails. ".format(len(list_session), len(sessions_fail)))

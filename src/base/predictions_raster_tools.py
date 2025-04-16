@@ -1,16 +1,16 @@
-import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import geopandas as gpd
+from pathlib import Path
 from geocube.api.core import make_geocube
 from math import radians, cos, sin, sqrt, atan2
 
 from scipy.interpolate import griddata
 from scipy.spatial import ConvexHull
-from matplotlib.path import Path
+from matplotlib.path import Path as MatPath
 
-def haversine(point1, point2):
+def haversine(point1: tuple[float, float], point2: tuple[float, float]) -> float:
     """Calculate the Haversine distance between two geographic points."""
     R = 6371000  # Earth radius in meters
     lat1, lon1 = point1
@@ -22,7 +22,7 @@ def haversine(point1, point2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-def compute_grid_value(predictions_csv):
+def compute_grid_value(predictions_csv: pd.DataFrame) -> np.floating:
     """Prepare gridded data by processing a dataframe from CSV and calculating grid_value."""
     
     distances = []
@@ -35,8 +35,8 @@ def compute_grid_value(predictions_csv):
 
     return median_within
 
-def prepare_gridded_data(predictions_csv, target_class, grid_value, interpolation_method):
-    def calculate_degree_spacing(meters, avg_latitude):
+def prepare_gridded_data(predictions_csv: pd.DataFrame, target_class: str, grid_value: np.floating, interpolation_method: str) -> tuple[pd.DataFrame, float, float]:
+    def calculate_degree_spacing(meters: np.floating, avg_latitude: float) -> tuple:
         # Conversion factor from meters to degrees (approximate)
         meters_per_degree = 111319
 
@@ -80,7 +80,7 @@ def prepare_gridded_data(predictions_csv, target_class, grid_value, interpolatio
 
     # Compute the convex hull for the original points
     hull = ConvexHull(points)
-    hull_path = Path(points[hull.vertices])
+    hull_path = MatPath(points[hull.vertices])
     
     # Mask the gridded data based on convex hull
     mask = np.array([hull_path.contains_point(i) for i in zip(df_gridded['GPSLongitude'], df_gridded['GPSLatitude'])])
@@ -91,7 +91,7 @@ def prepare_gridded_data(predictions_csv, target_class, grid_value, interpolatio
 
     return df_gridded, latitude_spacing, longitude_spacing
 
-def create_rasters_for_classes(predictions_csv_path, classes, output_path, sessiontag, interpolation_method):
+def create_rasters_for_classes(predictions_csv_path: Path, classes: list, output_path: Path, sessiontag: str, interpolation_method: str):
 
     predictions_csv = pd.read_csv(predictions_csv_path)
     if len(predictions_csv) == 0:
@@ -119,5 +119,5 @@ def create_rasters_for_classes(predictions_csv_path, classes, output_path, sessi
         # Calculate initial resolution based on median distances
         resol =  np.max([lat_spacing, lon_spacing])
         cube = make_geocube(vector_data=gdf, resolution=(-resol, resol))
-        raster_path = os.path.join(output_path, f"{sessiontag}_{target_class.replace('/', '_')}_raster.tif")
-        cube[target_class].rio.to_raster(raster_path)
+        raster_path = Path(output_path, f"{sessiontag}_{target_class.replace('/', '_')}_raster.tif")
+        cube[target_class].rio.to_raster(str(raster_path))
