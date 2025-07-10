@@ -62,6 +62,7 @@ def evenly_select_images_on_interval(image_list: list) -> list:
     Function to select images evenly throughout a list based on their indexes.
     '''
     total_images = len(image_list)
+    if total_images < 100: return image_list # Not enough images.
     index_list = np.linspace(0, total_images, 100, dtype=int, endpoint=False)
     selected_images = [image_list[i] for i in index_list]
     return selected_images
@@ -301,12 +302,12 @@ def create_pdf_preview(session: Path, list_of_images: list, metadata_path: Path,
   
     print("PDF created!")
 
-def check_and_remove_predictions_files_if_necessary(session_path: Path, predictions_gps: Path, predictions_scores_gps: Path, min_prediction: int) -> bool:
+def check_and_remove_predictions_files_if_necessary(session_path: Path, multilabel_csv: Path, predictions_gps: Path, predictions_scores_gps: Path, min_prediction: int) -> bool:
     """ Remove all predictions stuff if we don't have enough predictions """
-    
-    if predictions_gps.exists():
-        predictions_gps_df = pd.read_csv(predictions_gps)
-        if len(predictions_gps_df) > min_prediction: return False
+
+    if multilabel_csv.exists():
+        multilabel_df = pd.read_csv(multilabel_csv)
+        if len(multilabel_df) > min_prediction: return False
     
     # If we reached this point, we don't have enough predictions so we delete all.
     if predictions_gps.exists():

@@ -25,7 +25,7 @@ def parse_args() -> Namespace:
     # Path of input.
     ap.add_argument("-pfol", "--path_folder", default="/media/bioeos/D/202311_plancha_session/", help="Load all images from a folder of sessions")
     ap.add_argument("-pses", "--path_session", default="/home/bioeos/Documents/Bioeos/annotations_some_image/20240524_REU-LE-PORT_HUMAN-1_01/", help="Load all images from a single session")
-    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/stleu.csv", help="Load all images from session write in the provided csv file")
+    ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/temp.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
@@ -202,7 +202,7 @@ def pipeline_seatizen(opt: Namespace):
             join_GPS_metadata(multilabel_scores_csv_name, metadata_csv_name, str(predictions_scores_gps))
 
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
-            if check_and_remove_predictions_files_if_necessary(session, predictions_gps, predictions_scores_gps, min_prediction):
+            if check_and_remove_predictions_files_if_necessary(session, multilabel_pred_csv_name, predictions_gps, predictions_scores_gps, min_prediction):
                 print("[WARNING] All predictions have been removed due to lack of multilabel predictions.")
                 continue
             
@@ -223,7 +223,7 @@ def pipeline_seatizen(opt: Namespace):
             sessions_fail.append(session.name)
     
     # Stat
-    print("\nEnd of process. On {} sessions, {} fails. ".format(len(list_session), len(sessions_fail)))
+    print("\nEnd of process. On {} sessions, {} fails. ".format(len(sessions), len(sessions_fail)))
     if (len(sessions_fail)):
         [print("\t* " + session_name) for session_name in sessions_fail]
     
