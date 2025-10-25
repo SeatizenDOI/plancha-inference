@@ -194,7 +194,7 @@ def pipeline_seatizen(opt: Namespace):
         try:
             predictions_gps = Path(session, "METADATA", "predictions_gps.csv")
             predictions_scores_gps = Path(session, "METADATA", "predictions_scores_gps.csv")
-            useful_images = get_uselful_images(capture_images.frames_path, jacques_csv_name)
+            useful_images = get_uselful_images(capture_images.frames_information, jacques_csv_name)
 
             # Create predictions_gps.csv
             print("\t-- Join metadata GPS")

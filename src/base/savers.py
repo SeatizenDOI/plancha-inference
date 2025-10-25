@@ -24,8 +24,8 @@ class JacquesPredictions(Pipeline):
                 stop = True
 
             if not stop and data:
-                for i, frame_path in enumerate(data["frame_paths"]):
-                    frame_name = frame_path.name
+                for i, frame_info in enumerate(data["frames_info"]):
+                    frame_name = frame_info.filename
                     self.csv_connector.write(f"{frame_name},{data['Useless'][i]},{data['prob_jacques'][i]}\n")
             
                 yield data
@@ -65,8 +65,8 @@ class  MultilabelPredictions(Pipeline):
 
             if not stop and data:
                 if "multilabel_labels" in data:
-                    for i, frame_path in enumerate(data["frame_paths"]):
-                        frame_name = frame_path.name
+                    for i, frame_info in enumerate(data["frames_info"]):
+                        frame_name = frame_info.filename
                         labels = ['1' if lab in data["multilabel_labels"][i] else '0' for lab in self.classes] 
                         self.csv_connector_classes.write(f"{frame_name},{','.join(labels)}\n")
                         self.csv_connector_scores.write(f"{frame_name},{','.join(data['multilabel_scores'][i])}\n")

@@ -13,8 +13,10 @@ import pandas as pd
 from PIL import Image
 from pathlib import Path
 from textwrap import wrap
+from typing import TypeVar
 from pypdf import PdfWriter
 from natsort import natsorted
+
 
 import matplotlib
 matplotlib.use('Agg')
@@ -28,6 +30,9 @@ from reportlab.lib.pagesizes import letter, landscape
 import cartopy.crs as ccrs
 from cartopy.io.img_tiles import GoogleTiles
 
+from .load_images import FrameInformation
+
+T = TypeVar("T")
 COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]
 
 def join_GPS_metadata(annotation_csv_path: Path, metadata_path: Path, merged_csv_path: Path):
@@ -54,10 +59,10 @@ def join_GPS_metadata(annotation_csv_path: Path, metadata_path: Path, merged_csv
     
     # Drop the 'Image_name' column from merged_df
     merged_df.drop(columns='Image_name', inplace=True)
-    
+
     merged_df.to_csv(merged_csv_path, index=False, header=True)
 
-def evenly_select_images_on_interval(image_list: list) -> list:
+def evenly_select_images_on_interval(image_list: list[T]) -> list[T]:
     '''
     Function to select images evenly throughout a list based on their indexes.
     '''
@@ -138,13 +143,13 @@ def create_predictions_map(predictions_path: Path, classes: list, alpha3_code: s
 
     return tmp_path
 
-def get_uselful_images(frames_path_list: list, jacques_predictions: Path) -> list:
+def get_uselful_images(frames_path_list: list[FrameInformation], jacques_predictions: Path) -> list[FrameInformation]:
 
     list_frames_useful = []
     df_jacques = pd.read_csv(jacques_predictions)
     
     for frame in frames_path_list:
-        result = df_jacques[df_jacques["FileName"] == frame.name]
+        result = df_jacques[df_jacques["FileName"] == frame.filename]
         if len(result) == 0: continue
         
         if result.iloc[0]["Useless"] == 0:
@@ -152,7 +157,7 @@ def get_uselful_images(frames_path_list: list, jacques_predictions: Path) -> lis
 
     return list_frames_useful
 
-def create_pdf_preview(session: Path, list_of_images: list, metadata_path: Path, prediction_gps_path: Path, classes: list):
+def create_pdf_preview(session: Path, list_of_images: list[FrameInformation], metadata_path: Path, prediction_gps_path: Path, classes: list):
     '''
     Function to create a pdf preview of the session. It will contains:
     - a trajectory map
@@ -211,7 +216,7 @@ def create_pdf_preview(session: Path, list_of_images: list, metadata_path: Path,
             x_coord = 30
             y_coord -= 110
 
-        img = Image.open(image)
+        img = Image.open(image.frame_path)
         img.thumbnail((100, 100))
 
         img_width, img_height = img.size

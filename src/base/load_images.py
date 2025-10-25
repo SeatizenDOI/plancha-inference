@@ -1,9 +1,18 @@
 import pandas as pd
 from pathlib import Path
-
+from dataclasses import dataclass
 from .parse_opt import Sources
 
-def load_frames_from_source(src: Path, mode: Sources) -> list[Path]:
+@dataclass
+class FrameInformation:
+    frame_path: Path
+    filename: str
+
+    def __lt__(self, value):
+        self.filename < value.filename
+
+
+def load_frames_from_source(src: Path, mode: Sources) -> list[FrameInformation]:
     """ Returns to the correct import function"""
     frames = []
     
@@ -16,7 +25,7 @@ def load_frames_from_source(src: Path, mode: Sources) -> list[Path]:
     
     return frames 
 
-def load_frames_from_csv_session(src: Path)-> list[Path]:
+def load_frames_from_csv_session(src: Path)-> list[FrameInformation]:
     """ Import frames from a csv listing sessions """
 
     # Check if csv file exists.
@@ -33,7 +42,7 @@ def load_frames_from_csv_session(src: Path)-> list[Path]:
     print(f"Successfully load {len(frames)} images")
     return frames
 
-def load_frames_from_folder(src: Path) -> list[Path]:
+def load_frames_from_folder(src: Path) -> list[FrameInformation]:
     """ Import frames from a folder of sessions """
 
     # Check if folder of sessions exists.
@@ -49,7 +58,7 @@ def load_frames_from_folder(src: Path) -> list[Path]:
     print(f"Successfully load {len(frames)} images")
     return frames
 
-def load_frames_from_session(src: Path) -> list[Path]:
+def load_frames_from_session(src: Path) -> list[FrameInformation]:
     """ Import frames from a single session """
     frames_path = []
 
@@ -77,6 +86,7 @@ def load_frames_from_session(src: Path) -> list[Path]:
         if not path_img.exists() or not path_img.is_file() or not path_img.suffix.lower() in ('.png', '.jpg', '.jpeg'):
             cpt_error += 1
             continue
-        frames_path.append(path_img)
+        frames_path.append(FrameInformation(path_img, row["FileName"]))
+
     print(f"Folder {src}, number of files: {cpt_image}, number of errors: {cpt_error}")
     return frames_path
