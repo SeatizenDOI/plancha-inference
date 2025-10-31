@@ -2,5 +2,4 @@ __pycache__
 annotations
 models
 profiling
-*.ipynb
 csv_inputs
