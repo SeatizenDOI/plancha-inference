@@ -11,6 +11,12 @@ from src.base.savers import JacquesPredictions, MultilabelPredictions
 from src.base.predictions_raster_tools import create_rasters_for_classes
 from src.base.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
 
+MODEL_REGISTRY = {
+    "multilabel": JacquesPredictions,
+    "bioclip2": JacquesPredictions,
+}
+
+
 def parse_args() -> Namespace:
 
     # Parse command line arguments.
@@ -29,16 +35,21 @@ def parse_args() -> Namespace:
 
     # Choose how to used jacques model.
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
-    ap.add_argument("-jtrt", "--jacques_trt", action="store_true", help="Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference")
-    ap.add_argument("-jcsv", "--jacques_csv", action="store_true", help="Used csv file of jacques predictions")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
     
     # Choose how to used multilabel model.
     ap.add_argument("-mlu", "--multilabel_url", default="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze", help="Hugging face repository")
-    ap.add_argument("-mltrt", "--multilabel_trt", action="store_true", help="Speedup inference with tensorrt")
     ap.add_argument("-nml", "--no_multilabel", action="store_true", help="Didn't used multilabel model")
 
+    ap.add_argument(
+        "--model",
+        choices=MODEL_REGISTRY.keys(),
+        required=True,
+        help="Which model class to use."
+    )
+
     # Optional arguments.
+    ap.add_argument("-trt", "--tensorrt", action="store_true", help="Try to use TensorRT")
     ap.add_argument("-np", "--no-progress", action="store_true", help="Hide display progress")
     ap.add_argument("-ns", "--no-save", action="store_true", help="Don't save annotations")
     ap.add_argument("-npr", "--no_prediction_raster", action="store_true", help="Don't produce predictions rasters")
@@ -52,7 +63,8 @@ def parse_args() -> Namespace:
 
 def pipeline_seatizen(opt: Namespace):
     print("\n-- Parse input options", end="\n\n")
-    
+    print(opt)
+    return
     batch_size = int(opt.batch_size) if opt.batch_size.isnumeric() else 1
     min_prediction = int(opt.min_prediction) if opt.min_prediction.isnumeric() else 100
 
@@ -68,21 +80,23 @@ def pipeline_seatizen(opt: Namespace):
         jacques_model = None 
     elif opt.jacques_trt:
         try:
-            from src.tensorrt_boost.jacques_predictor import JacquesPredictor
+            from tensorrt_boost.Jacques import JacquesPredictor
         except ImportError as e:
             print(e)
             return
         jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
     else:
         try:
-            from src.normal_gpu.jacques_predictor import JacquesPredictor, JacquesCSV
+            from normal_gpu.Jacques import JacquesPredictor
         except ImportError as e:
             print(e)
             return
-        if opt.jacques_csv:
-            jacques_model = JacquesCSV()
-        else:
-            jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
+
+        jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
+    
+    
+    # Load Model
+
 
     # Load Hugging face model.
     multilabel_model = None 
