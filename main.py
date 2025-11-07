@@ -7,7 +7,7 @@ from argparse import ArgumentParser, Namespace
 
 from src.base.capture_images import CaptureImages
 from src.models.Jacques import Jacques
-from src.models import MODEL_REGISTRY
+from src.models.registry import MODEL_REGISTRY
 from src.lib.parse_opt import Sources, get_list_sessions
 
 def parse_args() -> Namespace:
@@ -30,21 +30,21 @@ def parse_args() -> Namespace:
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
 
-    ap.add_argument(
-        "--models",
-        nargs="+",
-        choices=MODEL_REGISTRY.keys(),
-        required=True,
-        help="List of model names to load."
-    )
-    ap.add_argument(
-        "--weights",
-        nargs="+",
-        help=(
-            "Optional list of weight paths corresponding to the models. "
-            "If omitted, defaults from MODEL_REGISTRY will be used."
-        )
-    )
+    # ap.add_argument(
+    #     "--models",
+    #     nargs="+",
+    #     choices=MODEL_REGISTRY.keys(),
+    #     required=True,
+    #     help="List of model names to load."
+    # )
+    # ap.add_argument(
+    #     "--weights",
+    #     nargs="+",
+    #     help=(
+    #         "Optional list of weight paths corresponding to the models. "
+    #         "If omitted, defaults from MODEL_REGISTRY will be used."
+    #     )
+    # )
 
     # Optional arguments.
     ap.add_argument("-trt", "--tensorrt", action="store_true", help="Try to use TensorRT")
@@ -71,10 +71,10 @@ def main(opt: Namespace):
     capture_images = CaptureImages(batch_size)
 
     # Jacques. Not used in model manager because jacques is mandatory in a seatizen session.
-    jacques_model = Jacques()
+    jacques_model = Jacques(opt.jacques_checkpoint_url, opt.tensorrt, batch_size)
 
     # Model manager to deal with all kind of model.
-    models_manager = ModelsManager()
+    # models_manager = ModelsManager()
 
 
     # Stat
@@ -113,7 +113,7 @@ def main(opt: Namespace):
 
         # Setup pipeline for current session
         capture_images.setup(session, Sources.SESSION)
-        jacques_model.setup()
+        jacques_model.setup_new_session(session)
 
         pipeline = (
             capture_images |

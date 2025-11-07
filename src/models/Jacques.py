@@ -11,7 +11,8 @@ from pathlib import Path
 from collections import OrderedDict
 from torchvision.models.resnet import ResNet, resnet50
 from subprocess import Popen, PIPE, CalledProcessError
-
+import numpy as np
+from ..lib.tools import sigmoid
 try:
     from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
     HAS_TENSORRT = True
@@ -21,96 +22,109 @@ except ImportError:
     HAS_TENSORRT = False
 
 
-PATH_TO_JACQUES_MODEL_DIRECTORY = "./models/jacques/"
+PATH_TO_JACQUES_MODEL_DIRECTORY = "./weights/jacques/"
 JACQUES_THRESHOLD = 0.306
 
 
 class Jacques(ModelBase):
-    """Pipeline for jacques predictor. Jacques sort image in useless/useful classes"""
+    """Pipeline for jacques. Jacques sort image in useless/useful classes"""
 
-    def __init__(self, checkpoint: str, batch_size: int):
-        super(JacquesPredictor).__init__()
-        self.model = build_jacques_model(checkpoint)
-        self.transform = get_image_transformation()
+    def __init__(self, checkpoint: str, use_tensorrt=True, batch_size=8, **kwargs):
+        super().__init__(**kwargs)
+        self.checkpoint = checkpoint
+        self.batch_size = batch_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.batch_size = batch_size
+        self.use_tensorrt = use_tensorrt and HAS_TENSORRT
+        self.init_model()
+
     
-    def __init__(self, use_tensorrt=True, batch_size=8, **kwargs):
-        pass
-    
-    def generator(self):
-        """Yields the image enriched with jacques predictions"""
-        self.model.eval() # Put model in inference mode
-
-        data = None
-        stop = False
-        while self.has_next() and not stop:
-            try:
-                # Buffer the pipeline stream.
-                data = next(self.source)
-            except StopIteration:
-                stop = True
-
-            if not stop and data:
-                data["Useless"], data["prob_jacques"] = [], []
-                # Pass image to GPU
-                for frame in data["frames"]:
-                    image = self.transform(frame)[None, :]
-                    image.to(self.device) 
-
-                    with torch.no_grad():
-                        logits = self.model(image)
-                        prob = torch.sigmoid(logits).data
-                        prob_round = round(prob.cpu().numpy()[0][0], 3)
-                        data["Useless"].append(1 if prob_round > JACQUES_THRESHOLD else 0)
-                        data["prob_jacques"].append(prob_round)
-
-                yield data
-
-    def cleanup(self):
-        """ nothing to release """
-        pass
-
-import torch
-import numpy as np
-from pathlib import Path
-redictor(Pipeline):
-    """Pipeline for jacques predictor. Jacques sort image in useless/use classes"""
-
-    def __init__(self, checkpoint: str, batch_size: int):
-        super(JacquesPredictor).__init__()
-        
-        self.batch_size = batch_size
-        self.model = NeuralNetworkGPU(get_jacques_engine_name(checkpoint, batch_size))
+    def init_model(self):
         self.transform = get_image_transformation()
+
+        if self.use_tensorrt:
+            print("[INFO] Using TensorRT engine.")
+            self.model = NeuralNetworkGPU(get_jacques_engine_name(self.checkpoint, self.batch_size))
+        else:
+            print("[INFO] Using standard PyTorch model.")
+            self.model = build_jacques_model(self.checkpoint)
+
+
+    def setup_new_session(self, session: Path):
+        self.filename_pred = Path(session, "PROCESSED_DATA/IA/jacques.csv")
+        self.csv_connector = open(self.filename_pred, "w")
+        self.csv_connector.write("FileName,Useless,Score\n")
     
     def generator(self):
-        """Yields the image enriched with jacques predictions"""
+        """Unified generator dispatch"""
+        if self.use_tensorrt:
+            base_gen = self._generator_tensorrt()
+        else:
+            self.model.eval() # Put model in inference mode
+            base_gen = self._generator_pytorch()
         
-        data = None
-        stop = False
-        while self.has_next() and not stop:
-            try:
-                # Buffer the pipeline stream.
-                data = next(self.source)
-            except StopIteration:
-                stop = True
+        # Wrap with CSV writing
+        yield from self._generator_with_csv(base_gen)
+    
+    def _generator_pytorch(self):
 
-            if not stop and data:
-                images = [(self.transform(frame)[None, :]).numpy() for frame in data["frames"]]
+        for data in self._data_stream():
+            data["Useless"], data["prob_jacques"] = [], []
+            for frame in data["frames"]:
+                image = self.transform(frame)[None, :]
+                image.to(self.device) 
 
-                outputs = np.split(self.model.detect(np.stack(images))[0], self.batch_size)
-                data["Useless"], data["prob_jacques"] = [], []
-                for output in outputs:
-                    prob = sigmoid(output)[0]
-                    data["Useless"].append(1 if prob > JACQUES_THRESHOLD else 0)
-                    data["prob_jacques"].append(prob)
+                with torch.no_grad():
+                    logits = self.model(image)
+                    prob = torch.sigmoid(logits).data
+                    prob_round = round(prob.cpu().numpy()[0][0], 3)
+                    data["Useless"].append(1 if prob_round > JACQUES_THRESHOLD else 0)
+                    data["prob_jacques"].append(prob_round)
+            yield data
+                    
+    def _generator_tensorrt(self):
+        for data in self._data_stream():
+            images = [(self.transform(frame)[None, :]).numpy() for frame in data["frames"]]
 
+            outputs = np.split(self.model.detect(np.stack(images))[0], self.batch_size)
+            data["Useless"], data["prob_jacques"] = [], []
+            for output in outputs:
+                prob = sigmoid(output)[0]
+                data["Useless"].append(1 if prob > JACQUES_THRESHOLD else 0)
+                data["prob_jacques"].append(prob)
             yield data
 
+    def _generator_with_csv(self, base_generator):
+        """CSV-writing wrapper around another generator."""
+
+        for data in base_generator:
+            for i, frame_info in enumerate(data["frames_info"]):
+                frame_name = frame_info.filename
+                self.csv_connector.write(f"{frame_name},{data['Useless'][i]},{data['prob_jacques'][i]}\n")
+            
+            yield data               
+                    
+                    
+   
+    # ---------------------------------------------------------
+    # DATA FLOW HELPERS
+    # ---------------------------------------------------------
+    def _data_stream(self):
+        """Abstracts your data source handling."""
+        stop = False
+        while self.has_next() and not stop:
+            try:
+                data = next(self.source)
+                if not stop and data:
+                    yield data
+            except StopIteration:
+                stop = True
+
+    def _postprocess(self, data, logits):
+        """Common postprocessing for both backends."""
+        return data
+
     def cleanup(self):
-        """ nothing to release """
-        pass
+        self.csv_connector.close()
 
 
 def get_jacques_engine_name(checkpoint, batch_size):
@@ -138,40 +152,6 @@ def get_jacques_engine_name(checkpoint, batch_size):
 def build_jacques_onnx_file(model, path_to_onnx, batch_size):
     torch_input = torch.randn(batch_size, 3, 224, 224) #! FIXME Fixed value
     torch.onnx.export(model, torch_input, path_to_onnx)
-
-class JacquesPredictions(Pipeline):
-    """Pipeline task to save Jacques predictions"""
-
-    def __init__(self):
-        self.filename, self.csv_connector = None, None
-        super(JacquesPredictions, self).__init__()
-
-    def setup(self, filename: Path):
-        self.filename = filename
-        self.csv_connector = open(self.filename, "w")
-
-    def generator(self):
-        """ Write in csv file"""
-        self.csv_connector.write("FileName,Useless,Score\n")
-
-        data, stop = None, False
-        while self.has_next() and not stop:
-            try:
-                # Buffer the pipeline stream.
-                data = next(self.source)
-            except StopIteration:
-                stop = True
-
-            if not stop and data:
-                for i, frame_info in enumerate(data["frames_info"]):
-                    frame_name = frame_info.filename
-                    self.csv_connector.write(f"{frame_name},{data['Useless'][i]},{data['prob_jacques'][i]}\n")
-            
-                yield data
-    
-    def cleanup(self):
-        self.csv_connector.close()
-
 
 class HeadNet():
     def __init__(self, bodynet_features_out: int):

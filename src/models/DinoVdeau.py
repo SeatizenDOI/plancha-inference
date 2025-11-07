@@ -26,7 +26,7 @@ except ImportError:
 
 PATH_TO_MULTILABEL_DIRECTORY = "models/multilabel"
 
-@register_model("dinovdeau", default_weights="weights/dinovdeau.pt")
+@register_model("dinovdeau", default_weights="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze")
 class DinoVdeau(ModelBase):
 
     def __init__(self, use_tensorrt=True, batch_size=8, **kwargs):
@@ -86,9 +86,6 @@ class DinoVdeau(ModelBase):
 
     def _generator_with_csv(self, base_generator):
         """CSV-writing wrapper around another generator."""
-        header = ",".join(self.classes_name)
-        self.csv_connector_classes.write(f"FileName,{header}\n")
-        self.csv_connector_scores.write(f"FileName,{header}\n")
 
         for data in base_generator:
             if "multilabel_labels" in data:

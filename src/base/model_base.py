@@ -9,7 +9,7 @@ from ..lib.pipeline import Pipeline
 # Abstract class to manage models
 class ModelBase(Pipeline, ABC):
     """Pipeline to identify mulitple class in image"""
-    def __init__(self, repo_name: str, batch_size: int):
+    def __init__(self):
         super(ModelBase).__init__()
 
 

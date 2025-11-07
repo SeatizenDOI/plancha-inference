@@ -1,4 +1,3 @@
-# models/registry.py
 MODEL_REGISTRY = {}
 
 def register_model(name, default_weights=None):
