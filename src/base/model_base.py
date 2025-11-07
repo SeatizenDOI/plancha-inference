@@ -39,7 +39,7 @@ class ModelBase(Pipeline, ABC):
 
 
     # Optional method
-    def add_gps_position(self, metadata_path: Path):
+    def add_gps_position(self):
         """Optional: subclasses can override this to add GPS info."""
         raise NotImplementedError("add_gps_position not implemented")
 
@@ -61,6 +61,7 @@ class ModelBase(Pipeline, ABC):
         base_method = getattr(ModelBase, method_name, None)
         return callable(method) and method is not base_method
 
+
     # Optional syntactic sugar
     def need(self, method_name: str) -> bool:
         """Instance-level version."""
@@ -68,4 +69,4 @@ class ModelBase(Pipeline, ABC):
 
 
     def __repr__(self):
-        return f"{self.folder_name}, with_gps_position: {self.has_method('add_gps_position')}"
+        return f"{self.folder_name}, with_gps_position: {self.has_method('add_gps_position')}, with_pdf: {self.has_method('add_pdf_pages')}, with_rasters: {self.has_method('add_predictions_rasters')}"

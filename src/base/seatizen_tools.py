@@ -4,9 +4,6 @@
 
     Edit: Add typing.
 """
-
-import tqdm
-import time
 import shutil
 import numpy as np
 import pandas as pd
@@ -36,6 +33,7 @@ from .session_manager import SessionManager
 T = TypeVar("T")
 COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]
 
+
 def join_GPS_metadata(annotation_csv_path: Path, metadata_path: Path, merged_csv_path: Path):
     '''
     Function to merge multilabel annotations csv with GPS metadata (latitude, longitude and date)
@@ -63,6 +61,7 @@ def join_GPS_metadata(annotation_csv_path: Path, metadata_path: Path, merged_csv
 
     merged_df.to_csv(merged_csv_path, index=False, header=True)
 
+
 def evenly_select_images_on_interval(image_list: list[T]) -> list[T]:
     '''
     Function to select images evenly throughout a list based on their indexes.
@@ -72,6 +71,7 @@ def evenly_select_images_on_interval(image_list: list[T]) -> list[T]:
     index_list = np.linspace(0, total_images, 100, dtype=int, endpoint=False)
     selected_images = [image_list[i] for i in index_list]
     return selected_images
+
 
 def create_trajectory_map(metadata_path: Path, alpha3_code: str) -> Path | None:
     '''
@@ -107,7 +107,6 @@ def get_cmap(n, name='hsv'):
     '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct 
     RGB color; the keyword argument name must be a standard mpl colormap name.'''
     return plt.cm.get_cmap(name, n)
-
 
 
 def get_uselful_images(frames_path_list: list[FrameInformation], jacques_predictions: Path) -> list[FrameInformation]:

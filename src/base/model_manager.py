@@ -11,8 +11,9 @@ class ModelsManager:
 
         self.load_models(model_names, weight_paths, use_tensorrt, batch_size)
     
-    def load_models(self, model_names: list[str], weight_paths: list | None, use_tensorrt: bool, batch_size: int) -> list[ModelBase]:
 
+    def load_models(self, model_names: list[str], weight_paths: list | None, use_tensorrt: bool, batch_size: int) -> None:
+        """Load models from user arguments."""
         for i, name in enumerate(model_names):
             model_info = MODEL_REGISTRY[name]
             ModelClass = model_info["class"]
@@ -24,7 +25,7 @@ class ModelsManager:
                 else model_info["default_weights"]
             )
 
-            print(f"→ Loading {name} with weights: {weights}")
+            print(f"\t[INFO] Loading {name} with weights: {weights}")
             model = ModelClass(weights, use_tensorrt, batch_size)
             self.models.append(model)
 
@@ -51,25 +52,28 @@ class ModelsManager:
             if model.need("add_predictions_rasters"):
                 model.add_predictions_rasters(sm)
 
+
     def cleanup(self) -> None:
         for model in self.models:
             model.cleanup()
-    
+
+
     def files_generate_by_model(self) -> list[Path]:
         files = []
         for model in self.models:
             files += model.files_generate_by_model()
-        
         return files
 
 
     def __repr__(self):
         return f"Model Manager: {self.models}"
     
+
     def __ror__(self, source):
         """Allow chaining with | operator."""
         self.source = source
         return self
+
 
     def __iter__(self):
         """Iterate through all models sequentially."""

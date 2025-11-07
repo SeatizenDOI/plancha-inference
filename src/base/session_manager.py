@@ -81,6 +81,7 @@ class SessionManager:
 
         return True
     
+    
     def create_tmp_folder(self) -> None:
         if self._tmp_folder_pdf.exists():
             shutil.rmtree(self._tmp_folder_pdf)

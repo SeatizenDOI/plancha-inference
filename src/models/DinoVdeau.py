@@ -1,42 +1,29 @@
 import json
 import numpy as np
 import pandas as pd
-import time
-import torch
-import torch.nn as nn
-from pathlib import Path
-from huggingface_hub import snapshot_download
-from transformers import Dinov2Config, Dinov2ForImageClassification, AutoImageProcessor
-from ..base.model_base import ModelBase
-from ..base.seatizen_tools import join_GPS_metadata
-import cartopy.crs as ccrs
-from cartopy.io.img_tiles import GoogleTiles
-import pandas as pd
+from tqdm import tqdm
 from PIL import Image
 from pathlib import Path
-from textwrap import wrap
-from tqdm import tqdm
+from itertools import compress
+from huggingface_hub import snapshot_download
+from transformers import Dinov2Config, Dinov2ForImageClassification, AutoImageProcessor
 
+import torch
+import torch.nn as nn
 
+import cartopy.crs as ccrs
+from cartopy.io.img_tiles import GoogleTiles
 
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from reportlab.lib import colors
-from reportlab.pdfgen import canvas
-from reportlab.platypus import Table
-from reportlab.lib.pagesizes import letter, landscape
-
-from PIL import Image
-from itertools import compress
-
-
 from ..lib.tools import sigmoid
 from .registry import register_model
-from ..base.seatizen_tools import get_cmap, COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL
-from ..base.predictions_raster_tools import create_rasters_for_classes
+from ..base.model_base import ModelBase
 from ..base.session_manager import SessionManager
+from ..base.seatizen_tools import get_cmap, join_GPS_metadata, COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL
+from ..base.predictions_raster_tools import create_rasters_for_classes
 
 try:
     from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
@@ -45,6 +32,7 @@ except ImportError:
     NeuralNetworkGPU = None
     build_and_save_engine_from_onnx = None
     HAS_TENSORRT = False
+
 
 @register_model("dinovdeau", default_weights="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze")
 class DinoVdeau(ModelBase):
@@ -73,6 +61,7 @@ class DinoVdeau(ModelBase):
             print("[INFO] Using standard PyTorch model for dinov2.")
             self.model = NewHeadDinoV2ForImageClassification.from_pretrained(self.repo_name).to(self.device)
 
+
     def setup_new_session(self, session: Path):
         self.filename_pred = Path(session, "PROCESSED_DATA/IA", f"{session.name}_{self.repo_name.replace("/", "_")}.csv")
         self.filename_scores = Path(session, "PROCESSED_DATA/IA", f"{session.name}_{self.repo_name.replace("/", "_")}_scores.csv")
@@ -94,6 +83,7 @@ class DinoVdeau(ModelBase):
         # Wrap with CSV writing
         yield from self._generator_with_csv(base_gen)
 
+
     def _generator_pytorch(self):
         for data in self._data_stream():
             inputs = self.image_processor(data["frames"], return_tensors="pt").to(self.device)
@@ -101,11 +91,13 @@ class DinoVdeau(ModelBase):
                 logits = self.model(**inputs)["logits"]
             yield self._postprocess(data, logits)
 
+
     def _generator_tensorrt(self):
         for data in self._data_stream():
             inputs = self.image_processor(data["frames"], return_tensors="pt")["pixel_values"]
             outputs = np.split(self.model.detect(np.stack(inputs))[0], self.batch_size)
             yield self._postprocess(data, outputs)
+
 
     def _generator_with_csv(self, base_generator):
         """CSV-writing wrapper around another generator."""
