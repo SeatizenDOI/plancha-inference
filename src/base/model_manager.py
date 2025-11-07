@@ -32,15 +32,21 @@ class ModelsManager:
         for model in self.models:
             model.setup_new_session(session)
 
-
     def add_pdf_pages(self):
         pass
+
+    def add_gps_position(self, metadata_path: Path) -> None:
+        for model in self.models:
+            if model.need("add_gps_position"):
+                model.add_gps_position(metadata_path)
 
 
     def cleanup(self) -> None:
         for model in self.models:
             model.cleanup()
     
+    def __repr__(self):
+        return f"Model Manager: {self.models}"
     
     def __ror__(self, source):
         """Allow chaining with | operator."""

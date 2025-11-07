@@ -6,6 +6,7 @@ from pathlib import Path
 from huggingface_hub import snapshot_download
 from transformers import Dinov2Config, Dinov2ForImageClassification, AutoImageProcessor
 from ..base.model_base import ModelBase
+from ..base.seatizen_tools import join_GPS_metadata
 
 
 from PIL import Image
@@ -129,13 +130,20 @@ class DinoVdeau(ModelBase):
         self.csv_connector_classes.close()
         self.csv_connector_scores.close()
 
-    # Method specific to Dinovdeau
     def applyThreshold(self, scores: np.ndarray):
         if self.threshold.shape == scores.shape:
             return scores > self.threshold
         else:
             return scores > 0.5
+    
+    def add_gps_position(self, metadata_path: Path) -> None:
+        predictions_gps = Path(metadata_path.parent, "predictions_gps.csv")
+        predictions_scores_gps = Path(metadata_path.parent, "predictions_scores_gps.csv")
         
+        join_GPS_metadata(self.filename_pred, metadata_path, predictions_gps)
+        join_GPS_metadata(self.filename_scores, metadata_path, predictions_scores_gps)
+
+
 
 class NewHeadDinoV2ForImageClassification(Dinov2ForImageClassification):
     def __init__(self, config: Dinov2Config) -> None:

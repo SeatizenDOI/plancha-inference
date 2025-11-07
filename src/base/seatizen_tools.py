@@ -30,7 +30,7 @@ from reportlab.lib.pagesizes import letter, landscape
 import cartopy.crs as ccrs
 from cartopy.io.img_tiles import GoogleTiles
 
-from .load_images import FrameInformation
+from ..lib.load_images import FrameInformation
 
 T = TypeVar("T")
 COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL = ["REU"]

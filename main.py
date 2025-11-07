@@ -78,8 +78,8 @@ def main(opt: Namespace):
 
     # Model manager to deal with all kind of model.
     models_manager = ModelsManager(opt.models, opt.weights, opt.tensorrt, batch_size)
-
-
+    print(models_manager)
+    
     # Stat
     sessions_fail = []
     list_session = get_list_sessions(opt)
@@ -135,9 +135,11 @@ def main(opt: Namespace):
         try:
 
             # Add gpsposition to predictions.
+            print("\t-- Join metadata GPS")
+            models_manager.add_gps_position(session_manager.metadata_path)
             
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
-
+            session_manager.check_and_remove_predictions_files_if_necessary
             # Create pdf preview.
 
             # Create raster predictions.
