@@ -9,6 +9,7 @@ class SessionManager:
         self.session = session
 
         self._metadata_path = Path(self.session, "METADATA/metadata.csv")
+        self._tmp_folder_pdf = Path(self.session, "tmp_folder")
 
         self.clean_session(clean_session)
     
@@ -16,7 +17,18 @@ class SessionManager:
     @property
     def metadata_path(self) -> Path:  
         return self._metadata_path
+    
+    @property
+    def alpha3_code(self) -> str:
+        return self.session.name.split("_")[1].split("-")[0]
 
+    @property
+    def tmp_folder_pdf(self) -> Path:
+        return self._tmp_folder_pdf
+
+    @property
+    def pdf_file(self) -> Path:
+        return Path(self.session, f"000_{self.session.name}_preview.pdf")
 
     def verify_metadata_csv(self) -> bool:
         return self._metadata_path.exists()
@@ -33,6 +45,9 @@ class SessionManager:
             # Clean PROCESSED_DATA/IA folder
             if path_IA.exists():
                 shutil.rmtree(path_IA)
+
+            if self._tmp_folder_pdf.exists():
+                shutil.rmtree(self._tmp_folder_pdf)
 
             # Delete preview file
             for file in self.session.iterdir():
@@ -61,3 +76,8 @@ class SessionManager:
             file.unlink()
 
         return True
+    
+    def create_tmp_folder(self) -> None:
+        if self._tmp_folder_pdf.exists():
+            shutil.rmtree(self._tmp_folder_pdf)
+        self._tmp_folder_pdf.mkdir(exist_ok=True, parents=True)

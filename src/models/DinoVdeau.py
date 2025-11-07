@@ -1,5 +1,7 @@
 import json
 import numpy as np
+import pandas as pd
+import time
 import torch
 import torch.nn as nn
 from pathlib import Path
@@ -7,7 +9,24 @@ from huggingface_hub import snapshot_download
 from transformers import Dinov2Config, Dinov2ForImageClassification, AutoImageProcessor
 from ..base.model_base import ModelBase
 from ..base.seatizen_tools import join_GPS_metadata
+import cartopy.crs as ccrs
+from cartopy.io.img_tiles import GoogleTiles
+import pandas as pd
+from PIL import Image
+from pathlib import Path
+from textwrap import wrap
+from tqdm import tqdm
 
+
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Table
+from reportlab.lib.pagesizes import letter, landscape
 
 from PIL import Image
 from itertools import compress
@@ -15,6 +34,7 @@ from itertools import compress
 
 from ..lib.tools import sigmoid
 from .registry import register_model
+from ..base.seatizen_tools import get_cmap, COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL
 
 try:
     from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
@@ -149,6 +169,30 @@ class DinoVdeau(ModelBase):
         return [self.predictions_gps, self.predictions_scores_gps, self.filename_pred, self.filename_scores]
 
 
+
+    def add_pdf_pages(self, prefix: int, pdf_folder_tmp: Path, alpha3_code: int) -> Path:
+        """ Create a folder of map for each predictions. """
+
+        df = pd.read_csv(self.predictions_gps)
+        if len(df) == 0: return None # No predictions
+        if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
+        if round(df["GPSLatitude"].std(), 10) == 0.0 or round(df["GPSLongitude"].std(), 10) == 0.0: return None # All frames have the same gps coordinate
+
+        imagery = GoogleTiles(url='https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
+
+        # Create temp directory     
+        cmap = get_cmap(len(self.classes_name))
+        for i, category in tqdm(enumerate(self.classes_name)):
+            fig = plt.figure(figsize=(8, 6), dpi=300)
+            ax = fig.add_subplot(projection=ccrs.PlateCarree())
+            ax.set_extent([df.GPSLongitude.min()-0.0003, df.GPSLongitude.max()+0.0003, df.GPSLatitude.min()-0.0003, df.GPSLatitude.max()+0.0003])
+            ax.add_image(imagery, 19 if alpha3_code in COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL else 17)
+            ax.plot(df[df[category] == 1].GPSLongitude, df[df[category] == 1].GPSLatitude, '.', color=cmap(i), markersize=2.5, markeredgewidth=0)
+            ax.plot(df[df[category] == 0].GPSLongitude, df[df[category] == 0].GPSLatitude, '.', color='tab:gray', markersize=2.0, markeredgewidth=0)
+            ax.set_title(category)
+            path_to_save_img = Path(pdf_folder_tmp, f"{prefix}_multiple_page_{category.replace('/', '')}_subplots.jpg")
+            plt.savefig(str(path_to_save_img), dpi=300)
+            plt.close()
 
 
 #-------------------------------

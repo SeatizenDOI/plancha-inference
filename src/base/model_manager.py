@@ -32,8 +32,10 @@ class ModelsManager:
         for model in self.models:
             model.setup_new_session(session)
 
-    def add_pdf_pages(self):
-        pass
+    def add_pdf_pages(self, pdf_folder_tmp: Path, alpha3_code: int):
+        
+        for i, model in enumerate(self.models):
+            model.add_pdf_pages(i, pdf_folder_tmp, alpha3_code)
 
     def add_gps_position(self, metadata_path: Path) -> None:
         for model in self.models:

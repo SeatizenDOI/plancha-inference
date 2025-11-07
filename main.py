@@ -11,6 +11,7 @@ from src.models.registry import MODEL_REGISTRY
 from src.base.model_manager import ModelsManager
 from src.lib.parse_opt import Sources, get_list_sessions
 from src.base.session_manager import SessionManager
+from src.base.seatizen_tools import create_pdf_preview, get_uselful_images
 
 def parse_args() -> Namespace:
 
@@ -139,14 +140,20 @@ def main(opt: Namespace):
             models_manager.add_gps_position(session_manager.metadata_path)
             
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
-            session_manager.check_and_remove_predictions_files_if_necessary(min_prediction, jacques_model.jacques_file_pred, models_manager.files_generate_by_model())
+            if session_manager.check_and_remove_predictions_files_if_necessary(min_prediction, jacques_model.jacques_file_pred, models_manager.files_generate_by_model()):
+                print("[WARNING] All predictions have been removed due to lack of multilabel predictions.")
+                continue
             
             # Create pdf preview.
+            session_manager.create_tmp_folder()
+            models_manager.add_pdf_pages(session_manager.tmp_folder_pdf, session_manager.alpha3_code)
+            useful_images = get_uselful_images(capture_images.frames_information, jacques_model.jacques_file_pred)
+            create_pdf_preview(session_manager, useful_images)
 
             # Create raster predictions.
             
 
-            
+
             print(f"\nSession {session.name} end succesfully ! ", end="\n\n\n")
 
         except Exception:

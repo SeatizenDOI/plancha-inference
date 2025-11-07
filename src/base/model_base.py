@@ -43,6 +43,11 @@ class ModelBase(Pipeline, ABC):
         """Optional: subclasses can override this to add GPS info."""
         raise NotImplementedError("add_gps_position not implemented")
 
+    def add_pdf_pages(self):
+        """Optional: subclasses can override this to add pdf pages."""
+        raise NotImplementedError("add_pdf_pages not implemented")
+
+
     # Generic checker
     @classmethod
     def has_method(cls, method_name: str) -> bool:
