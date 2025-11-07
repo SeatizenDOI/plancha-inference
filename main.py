@@ -9,6 +9,7 @@ from src.base.capture_images import CaptureImages
 from src.models.Jacques import Jacques
 from src.models.registry import MODEL_REGISTRY
 from src.lib.parse_opt import Sources, get_list_sessions
+from src.base.session_manager import SessionManager
 
 def parse_args() -> Namespace:
 
@@ -73,6 +74,8 @@ def main(opt: Namespace):
     # Jacques. Not used in model manager because jacques is mandatory in a seatizen session.
     jacques_model = Jacques(opt.jacques_checkpoint_url, opt.tensorrt, batch_size)
 
+    print(MODEL_REGISTRY)
+
     # Model manager to deal with all kind of model.
     # models_manager = ModelsManager()
 
@@ -90,37 +93,20 @@ def main(opt: Namespace):
     for session in sessions:
 
         print(f"\nLaunched session {session.name}\n\n")
+        session_manager = SessionManager(session, opt.clean)
 
-        # Clean sessions if needed
-        path_IA = Path(session, "PROCESSED_DATA/IA")
-        if opt.clean:
-            print("\t-- Clean session \n\n")
-            # Clean PROCESSED_DATA/IA folder
-            if path_IA.exists():
-                shutil.rmtree(path_IA)
-
-            # Delete preview file
-            for file in session.iterdir():
-                if file.is_file() and file.suffix.lower() == ".pdf":
-                    file.unlink()
-        path_IA.mkdir(exist_ok=True, parents=True)
-
-        metadata_csv_name = Path(session, "METADATA/metadata.csv")
-        if not Path.exists(metadata_csv_name):
+        if not session_manager.verify_metadata_csv():
             print(f"[ERROR] Session {session.name} doesn't have a metadata file.")
             sessions_fail.append(session.name)
             continue
 
         # Setup pipeline for current session
-        capture_images.setup(session, Sources.SESSION)
+        capture_images.setup_new_session(session, Sources.SESSION)
         jacques_model.setup_new_session(session)
 
         pipeline = (
             capture_images |
             jacques_model
-            # multilabel_model |
-            # jacques_savers |
-            # multilabel_savers
         )
 
         # Iterate through pipeline
@@ -139,11 +125,7 @@ def main(opt: Namespace):
         finally:
             progress.close()
 
-        # Pipeline cleanup
-        # if jacques_savers:
-        #     jacques_savers.cleanup()
-        # if multilabel_savers:
-        #     multilabel_savers.cleanup()
+        jacques_model.cleanup()
 
         print(f"\n -- Elapsed time: {datetime.now() - start_t} seconds\n\n")
 

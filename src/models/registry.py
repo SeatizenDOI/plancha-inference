@@ -1,6 +1,7 @@
 MODEL_REGISTRY = {}
 
 def register_model(name, default_weights=None):
+    print("lk,")
     def decorator(cls):
         MODEL_REGISTRY[name] = {
             "class": cls,

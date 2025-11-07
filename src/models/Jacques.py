@@ -1,18 +1,15 @@
 import torch
-import pandas as pd
-from pathlib import Path
-
-from ..lib.tools import get_image_transformation
-from ..base.model_base import ModelBase
-
-import torch
 from torch import nn
+
+import numpy as np
 from pathlib import Path
 from collections import OrderedDict
 from torchvision.models.resnet import ResNet, resnet50
 from subprocess import Popen, PIPE, CalledProcessError
-import numpy as np
-from ..lib.tools import sigmoid
+
+from ..base.model_base import ModelBase
+from ..lib.tools import sigmoid, get_image_transformation
+
 try:
     from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
     HAS_TENSORRT = True
@@ -21,13 +18,13 @@ except ImportError:
     build_and_save_engine_from_onnx = None
     HAS_TENSORRT = False
 
-
-PATH_TO_JACQUES_MODEL_DIRECTORY = "./weights/jacques/"
 JACQUES_THRESHOLD = 0.306
 
 
 class Jacques(ModelBase):
     """Pipeline for jacques. Jacques sort image in useless/useful classes"""
+    
+    folder_name = "jacques"
 
     def __init__(self, checkpoint: str, use_tensorrt=True, batch_size=8, **kwargs):
         super().__init__(**kwargs)
@@ -37,23 +34,24 @@ class Jacques(ModelBase):
         self.use_tensorrt = use_tensorrt and HAS_TENSORRT
         self.init_model()
 
-    
+
     def init_model(self):
         self.transform = get_image_transformation()
 
         if self.use_tensorrt:
             print("[INFO] Using TensorRT engine.")
-            self.model = NeuralNetworkGPU(get_jacques_engine_name(self.checkpoint, self.batch_size))
+            self.model = NeuralNetworkGPU(get_jacques_engine_name(self.weight_folder, self.checkpoint, self.batch_size))
         else:
             print("[INFO] Using standard PyTorch model.")
-            self.model = build_jacques_model(self.checkpoint)
+            self.model = build_jacques_model(self.weight_folder, self.checkpoint)
 
 
     def setup_new_session(self, session: Path):
-        self.filename_pred = Path(session, "PROCESSED_DATA/IA/jacques.csv")
-        self.csv_connector = open(self.filename_pred, "w")
+        self.jacques_file_pred = Path(session, "PROCESSED_DATA/IA", f"{session.name}_jacques-v0.1.0_model-{self.checkpoint}.csv")
+        self.csv_connector = open(self.jacques_file_pred, "w")
         self.csv_connector.write("FileName,Useless,Score\n")
     
+
     def generator(self):
         """Unified generator dispatch"""
         if self.use_tensorrt:
@@ -65,6 +63,7 @@ class Jacques(ModelBase):
         # Wrap with CSV writing
         yield from self._generator_with_csv(base_gen)
     
+
     def _generator_pytorch(self):
 
         for data in self._data_stream():
@@ -80,11 +79,11 @@ class Jacques(ModelBase):
                     data["Useless"].append(1 if prob_round > JACQUES_THRESHOLD else 0)
                     data["prob_jacques"].append(prob_round)
             yield data
-                    
+
+
     def _generator_tensorrt(self):
         for data in self._data_stream():
             images = [(self.transform(frame)[None, :]).numpy() for frame in data["frames"]]
-
             outputs = np.split(self.model.detect(np.stack(images))[0], self.batch_size)
             data["Useless"], data["prob_jacques"] = [], []
             for output in outputs:
@@ -92,6 +91,7 @@ class Jacques(ModelBase):
                 data["Useless"].append(1 if prob > JACQUES_THRESHOLD else 0)
                 data["prob_jacques"].append(prob)
             yield data
+
 
     def _generator_with_csv(self, base_generator):
         """CSV-writing wrapper around another generator."""
@@ -102,12 +102,8 @@ class Jacques(ModelBase):
                 self.csv_connector.write(f"{frame_name},{data['Useless'][i]},{data['prob_jacques'][i]}\n")
             
             yield data               
-                    
-                    
-   
-    # ---------------------------------------------------------
-    # DATA FLOW HELPERS
-    # ---------------------------------------------------------
+                            
+
     def _data_stream(self):
         """Abstracts your data source handling."""
         stop = False
@@ -119,26 +115,25 @@ class Jacques(ModelBase):
             except StopIteration:
                 stop = True
 
-    def _postprocess(self, data, logits):
-        """Common postprocessing for both backends."""
-        return data
 
     def cleanup(self):
         self.csv_connector.close()
 
 
-def get_jacques_engine_name(checkpoint, batch_size):
-    path_to_jacques_engine = Path(Path.cwd(), PATH_TO_JACQUES_MODEL_DIRECTORY, checkpoint.replace("/", "_"), f"jacques_bs_{batch_size}.engine")
-    if Path.exists(path_to_jacques_engine):
+
+def get_jacques_engine_name(weight_folder, checkpoint: str, batch_size: int) -> str:
+    """ Build an Engine to be used with tensorrt"""
+    path_to_jacques_engine = Path(weight_folder, checkpoint.replace("/", "_"), f"jacques_bs_{batch_size}.engine")
+    if path_to_jacques_engine.exists():
         return str(path_to_jacques_engine)
 
     # Build Jacques model.
     model = build_jacques_model(checkpoint)
     model.eval()
 
-    path_to_jacques_onnx = Path(Path.cwd(), PATH_TO_JACQUES_MODEL_DIRECTORY, checkpoint.replace("/", "_"), f"jacques_bs_{batch_size}.onnx")
+    path_to_jacques_onnx = Path(weight_folder, checkpoint.replace("/", "_"), f"jacques_bs_{batch_size}.onnx")
     # Convert to onnx format if needed.
-    if not Path.exists(path_to_jacques_onnx):
+    if not path_to_jacques_onnx.exists():
         print("-- Building jacques onnx file")
         build_jacques_onnx_file(model, path_to_jacques_onnx, batch_size)
     
@@ -149,9 +144,11 @@ def get_jacques_engine_name(checkpoint, batch_size):
     # Return loaded engine.
     return str(path_to_jacques_engine)
 
+
 def build_jacques_onnx_file(model, path_to_onnx, batch_size):
     torch_input = torch.randn(batch_size, 3, 224, 224) #! FIXME Fixed value
     torch.onnx.export(model, torch_input, path_to_onnx)
+
 
 class HeadNet():
     def __init__(self, bodynet_features_out: int):
@@ -186,7 +183,7 @@ class HeadNet():
         return nn.Sequential(*head_layers)
 
 
-def build_jacques_model(checkpoint: str) -> ResNet:
+def build_jacques_model(weight_folder: Path, checkpoint: str) -> ResNet:
     backbone = resnet50(weights='ResNet50_Weights.DEFAULT')
     headnet = HeadNet(bodynet_features_out = backbone.fc.in_features)
 
@@ -198,13 +195,14 @@ def build_jacques_model(checkpoint: str) -> ResNet:
     backbone.fc = headnet.create_head_layers()
 
     # Load last checkpoint.
-    model = load_checkpoint(backbone, checkpoint)
+    model = load_checkpoint(weight_folder, backbone, checkpoint)
 
     return model
 
-def load_checkpoint(model: ResNet, checkpoint_name: str) -> ResNet:
+
+def load_checkpoint(weight_folder: Path, model: ResNet, checkpoint_name: str) -> ResNet:
     # Create path to get jacques model.
-    folder_checkpoint = Path(Path.cwd(), PATH_TO_JACQUES_MODEL_DIRECTORY, checkpoint_name.replace("/", "_"))
+    folder_checkpoint = Path(weight_folder, checkpoint_name.replace("/", "_"))
 
     # If we don't have download the checkpoint go ahead.    
     if not folder_checkpoint.exists() or not folder_checkpoint.is_dir():

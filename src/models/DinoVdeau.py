@@ -23,11 +23,10 @@ except ImportError:
     build_and_save_engine_from_onnx = None
     HAS_TENSORRT = False
 
-
-PATH_TO_MULTILABEL_DIRECTORY = "models/multilabel"
-
 @register_model("dinovdeau", default_weights="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze")
 class DinoVdeau(ModelBase):
+
+    folder_name = "multilabel"
 
     def __init__(self, use_tensorrt=True, batch_size=8, **kwargs):
         super().__init__(**kwargs)
@@ -36,16 +35,17 @@ class DinoVdeau(ModelBase):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.use_tensorrt = use_tensorrt and HAS_TENSORRT
         self.init_model()
+    
 
     def init_model(self):
         self.image_processor = AutoImageProcessor.from_pretrained(self.repo_name, use_fast=True)
-        self.config = get_dyno_config(self.repo_name)
+        self.config = get_dyno_config(self.weight_folder, self.repo_name)
         self.classes_name = list(self.config["label2id"].keys())
-        self.threshold = get_threshold(self.repo_name)
+        self.threshold = get_threshold(self.weight_folder,  self.repo_name)
 
         if self.use_tensorrt:
             print("[INFO] Using TensorRT engine.")
-            self.model = NeuralNetworkGPU(get_multilabel_engine(self.repo_name, self.batch_size))
+            self.model = NeuralNetworkGPU(get_multilabel_engine(self.weight_folder, self.repo_name, self.batch_size))
         else:
             print("[INFO] Using standard PyTorch model.")
             self.model = NewHeadDinoV2ForImageClassification.from_pretrained(self.repo_name).to(self.device)
@@ -157,10 +157,10 @@ class NewHeadDinoV2ForImageClassification(Dinov2ForImageClassification):
         return nn.Sequential(*layers)
 
 
-def get_dyno_config(repo_name: str) -> dict:
-    repo_path = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name)
-    if not Path.exists(repo_path):
-        snapshot_download(repo_id=repo_name, local_dir=Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name))
+def get_dyno_config(weight_folder: Path, repo_name: str) -> dict:
+    repo_path = Path(weight_folder, repo_name)
+    if not repo_path.exists():
+        snapshot_download(repo_id=repo_name, local_dir=Path(weight_folder, repo_name))
 
     config = None
     with open(Path(repo_path, "config.json")) as f:
@@ -169,25 +169,25 @@ def get_dyno_config(repo_name: str) -> dict:
     return config
 
 
-def get_threshold(repo_name: str) -> np.ndarray:
-    threshold_file = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name, "threshold.json")
+def get_threshold(weight_folder: Path, repo_name: str) -> np.ndarray:
+    threshold_file = Path(weight_folder, repo_name, "threshold.json")
     threshold = np.array([])
-    if Path.exists(threshold_file):
+    if threshold_file.exists():
         with open(threshold_file) as f:
             threshold = np.array(list(json.load(f).values()))
     return threshold
 
 
-def get_multilabel_engine(repo_name: str, batch_size: int) -> Path:
+def get_multilabel_engine(weight_folder: Path, repo_name: str, batch_size: int) -> Path:
     """ """
-    path_to_multilabel_engine = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name, f"multilabel_bs_{batch_size}.engine")
+    path_to_multilabel_engine = Path(weight_folder, repo_name, f"multilabel_bs_{batch_size}.engine")
     # Check for engine file.
-    if Path.exists(path_to_multilabel_engine):
+    if path_to_multilabel_engine.exists():
         return str(path_to_multilabel_engine)
 
     # If engine not found, build model and next build onnx and finally build engine.
-    path_to_multilabel_onnx = Path(Path.cwd(), PATH_TO_MULTILABEL_DIRECTORY, repo_name, f"multilabel_bs_{batch_size}.onnx")
-    if not Path.exists(path_to_multilabel_onnx):
+    path_to_multilabel_onnx = Path(weight_folder, repo_name, f"multilabel_bs_{batch_size}.onnx")
+    if not path_to_multilabel_onnx.exists():
         print("-- Building multilabel onnx file")
         build_onnx_file_for_multilabel(repo_name, path_to_multilabel_onnx, batch_size)
 
@@ -199,7 +199,7 @@ def get_multilabel_engine(repo_name: str, batch_size: int) -> Path:
 
 def build_onnx_file_for_multilabel(repo_name: str, path_to_multilabel_onnx: Path, batch_size: int) -> None:
     model = NewHeadDinoV2ForImageClassification.from_pretrained(repo_name)
-    image = Image.open(Path(Path.cwd(), "inputs/image_mutilabel_setup.jpeg"))
+    image = Image.open(Path("./inputs/image_mutilabel_setup.jpeg"))
     image_processor = AutoImageProcessor.from_pretrained(repo_name)
     inputs = image_processor([image for _ in range(batch_size)], return_tensors="pt")
 

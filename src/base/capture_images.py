@@ -16,7 +16,7 @@ class CaptureImages(Pipeline):
         self.frame_id = None
         self.batch_size = batch_size
     
-    def setup(self, src: Path, mode: Sources):
+    def setup_new_session(self, src: Path, mode: Sources):
         """ Reset image loaded """
         self.frames_information = natsorted(load_frames_from_source(src, mode))
         self.frame_count = len(self.frames_information)

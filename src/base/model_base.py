@@ -12,6 +12,14 @@ class ModelBase(Pipeline, ABC):
     def __init__(self):
         super(ModelBase).__init__()
 
+    @property
+    @abstractmethod
+    def folder_name(self):
+        pass
+    
+    @property
+    def weight_folder(self):
+        return Path("./weights", self.folder_name)
 
     @abstractmethod
     def init_model(self):
