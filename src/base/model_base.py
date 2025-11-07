@@ -19,19 +19,23 @@ class ModelBase(Pipeline, ABC):
 
     @abstractmethod
     def init_model(self):
-        pass
+        raise NotImplementedError("Please implement me")
 
     @abstractmethod
     def setup_new_session(self, session: Path):
-        pass
+        raise NotImplementedError("Please implement me")
 
     @abstractmethod
     def generator(self):
-        pass
+        raise NotImplementedError("Please implement me")
 
     @abstractmethod
     def cleanup(self):
-        pass
+        raise NotImplementedError("Please implement me")
+    
+    @abstractmethod
+    def files_generate_by_model():
+        raise NotImplementedError("Please implement me")
 
 
     # Optional method

@@ -118,6 +118,9 @@ class Jacques(ModelBase):
 
     def cleanup(self):
         self.csv_connector.close()
+    
+    def files_generate_by_model(self) -> list[Path]:
+        return [self.jacques_file_pred]
 
 
 

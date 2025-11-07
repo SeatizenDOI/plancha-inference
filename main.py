@@ -32,6 +32,7 @@ def parse_args() -> Namespace:
     ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
 
+    # Choose which model you want to apply.
     ap.add_argument(
         "--models",
         nargs="+",
@@ -51,7 +52,6 @@ def parse_args() -> Namespace:
     # Optional arguments.
     ap.add_argument("-trt", "--tensorrt", action="store_true", help="Try to use TensorRT")
     ap.add_argument("-np", "--no-progress", action="store_true", help="Hide display progress")
-    ap.add_argument("-ns", "--no-save", action="store_true", help="Don't save annotations")
     ap.add_argument("-npr", "--no_prediction_raster", action="store_true", help="Don't produce predictions rasters")
     ap.add_argument("-c", "--clean", action="store_true", help="Clean pdf preview and predictions files")
     ap.add_argument("-is", "--index_start", default="0", help="Choose from which index to start")
@@ -139,10 +139,13 @@ def main(opt: Namespace):
             models_manager.add_gps_position(session_manager.metadata_path)
             
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
-            session_manager.check_and_remove_predictions_files_if_necessary
+            session_manager.check_and_remove_predictions_files_if_necessary(min_prediction, jacques_model.jacques_file_pred, models_manager.files_generate_by_model())
+            
             # Create pdf preview.
 
             # Create raster predictions.
+            
+
             
             print(f"\nSession {session.name} end succesfully ! ", end="\n\n\n")
 

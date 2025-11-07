@@ -45,6 +45,14 @@ class ModelsManager:
         for model in self.models:
             model.cleanup()
     
+    def files_generate_by_model(self) -> list[Path]:
+        files = []
+        for model in self.models:
+            files += model.files_generate_by_model()
+        
+        return files
+
+
     def __repr__(self):
         return f"Model Manager: {self.models}"
     

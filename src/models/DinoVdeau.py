@@ -98,9 +98,6 @@ class DinoVdeau(ModelBase):
             yield data
 
 
-    # ---------------------------------------------------------
-    # DATA FLOW HELPERS
-    # ---------------------------------------------------------
     def _data_stream(self):
         """Abstracts your data source handling."""
         stop = False
@@ -111,6 +108,7 @@ class DinoVdeau(ModelBase):
                     yield data
             except StopIteration:
                 stop = True
+
 
     def _postprocess(self, data, logits):
         """Common postprocessing for both backends."""
@@ -126,9 +124,11 @@ class DinoVdeau(ModelBase):
         data["multilabel_labels"] = labels_list
         return data
 
+
     def cleanup(self):
         self.csv_connector_classes.close()
         self.csv_connector_scores.close()
+
 
     def applyThreshold(self, scores: np.ndarray):
         if self.threshold.shape == scores.shape:
@@ -136,14 +136,24 @@ class DinoVdeau(ModelBase):
         else:
             return scores > 0.5
     
+
     def add_gps_position(self, metadata_path: Path) -> None:
-        predictions_gps = Path(metadata_path.parent, "predictions_gps.csv")
-        predictions_scores_gps = Path(metadata_path.parent, "predictions_scores_gps.csv")
+        self.predictions_gps = Path(metadata_path.parent, "predictions_gps.csv")
+        self.predictions_scores_gps = Path(metadata_path.parent, "predictions_scores_gps.csv")
         
-        join_GPS_metadata(self.filename_pred, metadata_path, predictions_gps)
-        join_GPS_metadata(self.filename_scores, metadata_path, predictions_scores_gps)
+        join_GPS_metadata(self.filename_pred, metadata_path, self.predictions_gps)
+        join_GPS_metadata(self.filename_scores, metadata_path, self.predictions_scores_gps)
+    
+
+    def files_generate_by_model(self) -> list[Path]:
+        return [self.predictions_gps, self.predictions_scores_gps, self.filename_pred, self.filename_scores]
 
 
+
+
+#-------------------------------
+# -- TOOLS
+#-------------------------------
 
 class NewHeadDinoV2ForImageClassification(Dinov2ForImageClassification):
     def __init__(self, config: Dinov2Config) -> None:

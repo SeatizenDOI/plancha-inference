@@ -306,27 +306,3 @@ def create_pdf_preview(session: Path, list_of_images: list[FrameInformation], me
         shutil.rmtree(img_folder_predictions_path)
   
     print("PDF created!")
-
-def check_and_remove_predictions_files_if_necessary(session_path: Path, multilabel_csv: Path, predictions_gps: Path, predictions_scores_gps: Path, min_prediction: int) -> bool:
-    """ Remove all predictions stuff if we don't have enough predictions """
-
-    if multilabel_csv.exists():
-        multilabel_df = pd.read_csv(multilabel_csv)
-        if len(multilabel_df) > min_prediction: return False
-    
-    # If we reached this point, we don't have enough predictions so we delete all.
-    if predictions_gps.exists():
-        predictions_gps.unlink()
-    
-    if predictions_scores_gps.exists():
-        predictions_scores_gps.unlink()
-    
-    metadata_csv = Path(session_path, "METADATA", "metadata.csv")
-    if metadata_csv.exists() and metadata_csv.is_file():
-        metadata_csv.unlink()
-    
-    ia_folder = Path(session_path, "PROCESSED_DATA", "IA")
-    if ia_folder.exists() and ia_folder.is_dir():
-        shutil.rmtree(ia_folder)
-
-    return True

@@ -1,5 +1,8 @@
-from pathlib import Path
 import shutil 
+import pandas as pd
+from pathlib import Path
+
+
 class SessionManager:
 
     def __init__(self, session: Path, clean_session: bool) -> None:
@@ -38,7 +41,23 @@ class SessionManager:
 
         path_IA.mkdir(exist_ok=True, parents=True)
     
-    def check_and_remove_predictions_files_if_necessary(self) -> bool: 
+
+    def check_and_remove_predictions_files_if_necessary(self, min_prediction: int, jacque_pred_path: Path, files_generated_by_models: list[Path]) -> bool: 
         """ Remove all predictions stuff if we don't have enough predictions """
 
-        pass
+        if not jacque_pred_path.exists(): return False
+
+        # Get all files who are not useless.
+        jacques_df = pd.read_csv(jacque_pred_path)
+        jacques_df = jacques_df[jacques_df["Useless"] == 0]
+
+        # If the limit is higher. Return
+        if len(jacques_df) >= min_prediction: return False
+
+        # If we reached this point, we don't have enough predictions so we delete all.
+        jacque_pred_path.unlink()
+
+        for file in files_generated_by_models:
+            file.unlink()
+
+        return True
