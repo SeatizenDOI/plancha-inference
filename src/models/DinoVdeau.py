@@ -28,9 +28,9 @@ class DinoVdeau(ModelBase):
 
     folder_name = "multilabel"
 
-    def __init__(self, use_tensorrt=True, batch_size=8, **kwargs):
-        super().__init__(**kwargs)
-        self.repo_name = "facebook/dinov2-base"
+    def __init__(self, weights, use_tensorrt: bool, batch_size: int):
+        super().__init__(weights, use_tensorrt, batch_size)
+        self.repo_name = weights
         self.batch_size = batch_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.use_tensorrt = use_tensorrt and HAS_TENSORRT
@@ -44,15 +44,15 @@ class DinoVdeau(ModelBase):
         self.threshold = get_threshold(self.weight_folder,  self.repo_name)
 
         if self.use_tensorrt:
-            print("[INFO] Using TensorRT engine.")
+            print("[INFO] Using TensorRT engine for dinov2.")
             self.model = NeuralNetworkGPU(get_multilabel_engine(self.weight_folder, self.repo_name, self.batch_size))
         else:
-            print("[INFO] Using standard PyTorch model.")
+            print("[INFO] Using standard PyTorch model for dinov2.")
             self.model = NewHeadDinoV2ForImageClassification.from_pretrained(self.repo_name).to(self.device)
 
     def setup_new_session(self, session: Path):
-        self.filename_pred = Path(session, "PROCESSED_DATA/IA/pred.csv")
-        self.filename_scores = Path(session, "PROCESSED_DATA/IA/score.csv")
+        self.filename_pred = Path(session, "PROCESSED_DATA/IA", f"{session.name}_{self.repo_name.replace("/", "_")}.csv")
+        self.filename_scores = Path(session, "PROCESSED_DATA/IA", f"{session.name}_{self.repo_name.replace("/", "_")}_scores.csv")
         self.csv_connector_classes = open(self.filename_pred, "w")
         self.csv_connector_scores = open(self.filename_scores, "w")
 

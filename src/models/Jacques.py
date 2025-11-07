@@ -26,9 +26,9 @@ class Jacques(ModelBase):
     
     folder_name = "jacques"
 
-    def __init__(self, checkpoint: str, use_tensorrt=True, batch_size=8, **kwargs):
-        super().__init__(**kwargs)
-        self.checkpoint = checkpoint
+    def __init__(self, weights: str, use_tensorrt: bool, batch_size: int):
+        super().__init__(weights, use_tensorrt, batch_size)
+        self.checkpoint = weights
         self.batch_size = batch_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.use_tensorrt = use_tensorrt and HAS_TENSORRT
@@ -39,10 +39,10 @@ class Jacques(ModelBase):
         self.transform = get_image_transformation()
 
         if self.use_tensorrt:
-            print("[INFO] Using TensorRT engine.")
+            print("[INFO] Using TensorRT engine for jacques.")
             self.model = NeuralNetworkGPU(get_jacques_engine_name(self.weight_folder, self.checkpoint, self.batch_size))
         else:
-            print("[INFO] Using standard PyTorch model.")
+            print("[INFO] Using standard PyTorch model for jacques.")
             self.model = build_jacques_model(self.weight_folder, self.checkpoint)
 
 
