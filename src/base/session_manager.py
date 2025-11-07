@@ -9,6 +9,7 @@ class SessionManager:
         self.session = session
 
         self._metadata_path = Path(self.session, "METADATA/metadata.csv")
+        self._ia_path = Path(self.session, "PROCESSED_DATA/IA")
         self._tmp_folder_pdf = Path(self.session, "tmp_folder")
 
         self.clean_session(clean_session)
@@ -25,6 +26,10 @@ class SessionManager:
     @property
     def tmp_folder_pdf(self) -> Path:
         return self._tmp_folder_pdf
+    
+    @property
+    def ia_path(self) -> Path:
+        return self._ia_path
 
     @property
     def pdf_file(self) -> Path:
@@ -39,12 +44,11 @@ class SessionManager:
 
     def clean_session(self, need_cleaning: bool):
         # Clean sessions if needed
-        path_IA = Path(self.session, "PROCESSED_DATA/IA")
         if need_cleaning:
             print("\t-- Clean session \n\n")
             # Clean PROCESSED_DATA/IA folder
-            if path_IA.exists():
-                shutil.rmtree(path_IA)
+            if self._ia_path.exists():
+                shutil.rmtree(self._ia_path)
 
             if self._tmp_folder_pdf.exists():
                 shutil.rmtree(self._tmp_folder_pdf)
@@ -54,7 +58,7 @@ class SessionManager:
                 if file.is_file() and file.suffix.lower() == ".pdf":
                     file.unlink()
 
-        path_IA.mkdir(exist_ok=True, parents=True)
+        self._ia_path.mkdir(exist_ok=True, parents=True)
     
 
     def check_and_remove_predictions_files_if_necessary(self, min_prediction: int, jacque_pred_path: Path, files_generated_by_models: list[Path]) -> bool: 

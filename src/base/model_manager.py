@@ -1,6 +1,7 @@
 from pathlib import Path
 from .model_base import ModelBase
 from ..models.registry import MODEL_REGISTRY
+from .session_manager import SessionManager
 
 class ModelsManager:
 
@@ -32,16 +33,23 @@ class ModelsManager:
         for model in self.models:
             model.setup_new_session(session)
 
-    def add_pdf_pages(self, pdf_folder_tmp: Path, alpha3_code: int):
-        
-        for i, model in enumerate(self.models):
-            model.add_pdf_pages(i, pdf_folder_tmp, alpha3_code)
 
     def add_gps_position(self, metadata_path: Path) -> None:
         for model in self.models:
             if model.need("add_gps_position"):
                 model.add_gps_position(metadata_path)
 
+
+    def add_pdf_pages(self, pdf_folder_tmp: Path, alpha3_code: int):
+        for i, model in enumerate(self.models):
+            if model.need("add_pdf_pages"):
+                model.add_pdf_pages(i, pdf_folder_tmp, alpha3_code)
+
+    
+    def add_predictions_rasters(self, sm: SessionManager) -> None:
+        for model in self.models:
+            if model.need("add_predictions_rasters"):
+                model.add_predictions_rasters(sm)
 
     def cleanup(self) -> None:
         for model in self.models:

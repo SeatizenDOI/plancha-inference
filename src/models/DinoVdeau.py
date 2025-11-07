@@ -35,6 +35,8 @@ from itertools import compress
 from ..lib.tools import sigmoid
 from .registry import register_model
 from ..base.seatizen_tools import get_cmap, COUNTRY_CODE_FOR_HIGH_ZOOM_LEVEL
+from ..base.predictions_raster_tools import create_rasters_for_classes
+from ..base.session_manager import SessionManager
 
 try:
     from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
@@ -169,7 +171,6 @@ class DinoVdeau(ModelBase):
         return [self.predictions_gps, self.predictions_scores_gps, self.filename_pred, self.filename_scores]
 
 
-
     def add_pdf_pages(self, prefix: int, pdf_folder_tmp: Path, alpha3_code: int) -> Path:
         """ Create a folder of map for each predictions. """
 
@@ -193,6 +194,10 @@ class DinoVdeau(ModelBase):
             path_to_save_img = Path(pdf_folder_tmp, f"{prefix}_multiple_page_{category.replace('/', '')}_subplots.jpg")
             plt.savefig(str(path_to_save_img), dpi=300)
             plt.close()
+    
+
+    def add_predictions_rasters(self, sm: SessionManager):
+        create_rasters_for_classes(self.filename_pred, self.classes_name, sm.ia_path, sm.session.name, "linear")
 
 
 #-------------------------------

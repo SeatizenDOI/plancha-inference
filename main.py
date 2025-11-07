@@ -76,10 +76,8 @@ def main(opt: Namespace):
     # Jacques. Not used in model manager because jacques is mandatory in a seatizen session.
     jacques_model = Jacques(opt.jacques_checkpoint_url, opt.tensorrt, batch_size)
 
-
     # Model manager to deal with all kind of model.
     models_manager = ModelsManager(opt.models, opt.weights, opt.tensorrt, batch_size)
-    print(models_manager)
     
     # Stat
     sessions_fail = []
@@ -145,14 +143,16 @@ def main(opt: Namespace):
                 continue
             
             # Create pdf preview.
+            print("\t-- Create pdf preview \n\n")
             session_manager.create_tmp_folder()
             models_manager.add_pdf_pages(session_manager.tmp_folder_pdf, session_manager.alpha3_code)
             useful_images = get_uselful_images(capture_images.frames_information, jacques_model.jacques_file_pred)
             create_pdf_preview(session_manager, useful_images)
 
             # Create raster predictions.
+            print("\t-- Creating raster for each class \n\n")
+            models_manager.add_predictions_rasters(session_manager)
             
-
 
             print(f"\nSession {session.name} end succesfully ! ", end="\n\n\n")
 

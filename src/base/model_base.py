@@ -46,6 +46,9 @@ class ModelBase(Pipeline, ABC):
     def add_pdf_pages(self):
         """Optional: subclasses can override this to add pdf pages."""
         raise NotImplementedError("add_pdf_pages not implemented")
+    
+    def add_predictions_rasters(self):
+        raise NotImplementedError("add_pdf_pages not implemented")
 
 
     # Generic checker
