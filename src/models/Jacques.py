@@ -235,6 +235,6 @@ def download_checkpoint(checkpoint_name: str, folder_checkpoint: Path):
     
     # Rename file to epoch.pth
     for file in folder_checkpoint.iterdir():
-        if file.suffix.lower() == ".pth":
+        if file.suffix.lower() == ".pth" or "epoch" in file.stem.lower():
             file.rename(Path(file.parent, "epoch.pth"))
             break
