@@ -163,8 +163,8 @@ class DinoVdeau(ModelBase):
         return [self.predictions_gps, self.predictions_scores_gps, self.filename_pred, self.filename_scores]
 
 
-    def add_pdf_pages(self, prefix: int, pdf_folder_tmp: Path, alpha3_code: int) -> Path:
-        """ Create a folder of map for each predictions. """
+    def add_pdf_pages(self, prefix: int, pdf_folder_tmp: Path, alpha3_code: int):
+        """ Create a folder of map for each prediction class. """
 
         df = pd.read_csv(self.predictions_gps)
         if len(df) == 0: return None # No predictions
