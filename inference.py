@@ -28,7 +28,7 @@ def parse_args() -> Namespace:
     ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/temp.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
-    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="8159228", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded . Here its a custom name but you can pass the DOI of version from this Zenodo Repository: https://zenodo.org/records/8159228")
+    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded . Here its a custom name but you can pass the DOI of version from this Zenodo Repository: https://zenodo.org/records/8159228")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
 
     # Choose which model you want to apply.

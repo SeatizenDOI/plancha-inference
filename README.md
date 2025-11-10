@@ -31,7 +31,7 @@ This repository works with sessions that contain a metadata.csv file in a METADA
 At the end of the process, this code will create a PROCESSED_DATA/IA folder that contains prediction and score files in CSV format, as well as raster files of the predictions.
 
 The METADATA folder will also have two additional files, which are the predictions with GPS coordinates and IMU values.
-* [Models] (#models)
+* [Models](#models)
 * [Docker](./docker.README.md)
 * [Installation](#installation)
 * [Usage](#usage)
