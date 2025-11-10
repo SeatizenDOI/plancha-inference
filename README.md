@@ -22,20 +22,37 @@
 
 </div>
 
-Plancha-inference is used to apply [Jacques](https://github.com/IRDG2OI/jacques) and a multilabel model from hugging-face like [DinoVdeau](https://github.com/SeatizenDOI/DinoVdeau)
+Plancha-inference is used to apply [Jacques](https://github.com/IRDG2OI/jacques) and any model implemented. Actually, we have :
+* [DinoVdeau](https://github.com/SeatizenDOI/DinoVdeau)
+* [BioClip2](https://https://huggingface.co/imageomics/bioclip-2)
 
 This repository works with sessions that contain a metadata.csv file in a METADATA folder. The metadata.csv file needs to have a column name that includes the term "relative_file_path".
 
 At the end of the process, this code will create a PROCESSED_DATA/IA folder that contains prediction and score files in CSV format, as well as raster files of the predictions.
 
 The METADATA folder will also have two additional files, which are the predictions with GPS coordinates and IMU values.
-
+* [Models] (#models)
 * [Docker](./docker.README.md)
 * [Installation](#installation)
 * [Usage](#usage)
 * [Contributing](#contributing)
 * [License](#license)
 
+## Models
+
+This workflow is model agnostic to perform inference on Seatizen session.
+
+We used a pre-model named Jacques to filter useless images.
+
+We can plug any model we want by adding a class with the good format :
+
+- the class need to specify the tensorrt implementation if exists
+- take in case the saver method.
+- if she want the predictions associated with GPS data
+- if she want the prediction generate as a raster
+- If she want to add something to the pdf preview
+
+Take example on DinoVdeau and BioClip2. 
 
 ## Installation
 
@@ -122,24 +139,21 @@ You can specify the paths to the files or folders to be used as input:
 ### Jacques model parameters
 
 * `-jcku`, `--jacques_checkpoint_url`: default="20240513_v20.0", Specified which checkpoint file to used, if checkpoint file is not found we downloaded it from zenodo. 
-* `-jtrt`, `--jacques_trt`: Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference
-* `-jcsv`, `--jacques_csv`: Used csv file of jacques predictions
 * `-nj`, `--no_jacques`: Didn't used jacques model
 
-### Mulilabel model parameters
+### Which models you want to apply and wich weight
 
-* `-mlu`, `--multilabel_url`: Hugging face repository. Default : lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze
-* `-mltrt`, `--multilabel_trt`: Speedup inference with tensorrt
-* `-nml`, `--no_multilabel`: Didn't used multilabel model
+* `--models`: List of model names to load. Default: ['dinovdeau']
+* `--weights`: Optional list of weight paths corresponding to the models. If omitted, defaults from MODEL_REGISTRY will be used.
 
-❗ You can safely omit -jtrt and -mltrt if you do not want to use TensorRT. The inference will still work using regular PyTorch execution.
+❗ You can safely omit -trt if you do not want to use TensorRT. The inference will still work using regular PyTorch execution.
 
 ### Optional Arguments
 
 The script also includes optional arguments to fine-tune its behavior:
 
+* `-trt`, `--tensorrt`: Try to use TensorRT. Default: False
 * `-np`, `--no-progress`: Hide display progress bar. Default: False
-* `-ns`, `--no-save`: Don't save annotations. Default: False
 * `-npr`, `--no_prediction_raster`: Don't produce predictions rasters. Default False
 * `-c`, `--clean`: Clean pdf preview and predictions files. Default: False
 * `-is`, `--index_start`: Choose from which index to start. Default: 0
@@ -151,7 +165,7 @@ The script also includes optional arguments to fine-tune its behavior:
 
 An example of command to process. We process a folder of session using tensorrt to speedup inference and we clean old predictions files.
 ```bash
-python inference.py -efol -pfol /path/to/my/folder -mltrt -jtrt -c
+python inference.py -efol -pfol /path/to/my/folder -trt -c
 ```
 
 ## Contributing

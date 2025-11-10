@@ -1,15 +1,15 @@
-import shutil
 import traceback
 from tqdm import tqdm
-from pathlib import Path
 from datetime import datetime
 from argparse import ArgumentParser, Namespace
 
+from src.models.Jacques import Jacques
+from src.models.registry import MODEL_REGISTRY
+from src.lib.parse_opt import Sources, get_list_sessions
+from src.base.model_manager import ModelsManager
 from src.base.capture_images import CaptureImages
-from src.base.parse_opt import Sources, get_list_sessions
-from src.base.savers import JacquesPredictions, MultilabelPredictions
-from src.base.predictions_raster_tools import create_rasters_for_classes
-from src.base.seatizen_tools import create_pdf_preview, join_GPS_metadata, get_uselful_images, check_and_remove_predictions_files_if_necessary
+from src.base.session_manager import SessionManager
+from src.base.seatizen_tools import create_pdf_preview, get_uselful_images
 
 def parse_args() -> Namespace:
 
@@ -28,19 +28,29 @@ def parse_args() -> Namespace:
     ap.add_argument("-pcsv", "--path_csv_file", default="./csv_inputs/temp.csv", help="Load all images from session write in the provided csv file")
 
     # Choose how to used jacques model.
-    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="20240513_v20.0", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded it")
-    ap.add_argument("-jtrt", "--jacques_trt", action="store_true", help="Build an engine from jacques_checkpoint_url, use tensorrt to speedup inference")
-    ap.add_argument("-jcsv", "--jacques_csv", action="store_true", help="Used csv file of jacques predictions")
+    ap.add_argument("-jcku", "--jacques_checkpoint_url", default="8159228", help="Specified which checkpoint file to used, if checkpoint file is not found we downloaded . Here its a custom name but you can pass the DOI of version from this Zenodo Repository: https://zenodo.org/records/8159228")
     ap.add_argument("-nj", "--no_jacques", action="store_true", help="Didn't used jacques model")
-    
-    # Choose how to used multilabel model.
-    ap.add_argument("-mlu", "--multilabel_url", default="lombardata/DinoVdeau-large-2024_04_03-with_data_aug_batch-size32_epochs150_freeze", help="Hugging face repository")
-    ap.add_argument("-mltrt", "--multilabel_trt", action="store_true", help="Speedup inference with tensorrt")
-    ap.add_argument("-nml", "--no_multilabel", action="store_true", help="Didn't used multilabel model")
+
+    # Choose which model you want to apply.
+    ap.add_argument(
+        "--models",
+        nargs="+",
+        choices=MODEL_REGISTRY.keys(),
+        help="List of model names to load.",
+        default=["dinovdeau"]
+    )
+    ap.add_argument(
+        "--weights",
+        nargs="+",
+        help=(
+            "Optional list of weight paths corresponding to the models. "
+            "If omitted, defaults from MODEL_REGISTRY will be used."
+        )
+    )
 
     # Optional arguments.
+    ap.add_argument("-trt", "--tensorrt", action="store_true", help="Try to use TensorRT")
     ap.add_argument("-np", "--no-progress", action="store_true", help="Hide display progress")
-    ap.add_argument("-ns", "--no-save", action="store_true", help="Don't save annotations")
     ap.add_argument("-npr", "--no_prediction_raster", action="store_true", help="Don't produce predictions rasters")
     ap.add_argument("-c", "--clean", action="store_true", help="Clean pdf preview and predictions files")
     ap.add_argument("-is", "--index_start", default="0", help="Choose from which index to start")
@@ -50,9 +60,9 @@ def parse_args() -> Namespace:
 
     return ap.parse_args()
 
-def pipeline_seatizen(opt: Namespace):
+def main(opt: Namespace):
     print("\n-- Parse input options", end="\n\n")
-    
+
     batch_size = int(opt.batch_size) if opt.batch_size.isnumeric() else 1
     min_prediction = int(opt.min_prediction) if opt.min_prediction.isnumeric() else 100
 
@@ -61,55 +71,12 @@ def pipeline_seatizen(opt: Namespace):
     # Image input (csv with session path, folder_path_to_sessions, path_to_sessions)
     capture_images = CaptureImages(batch_size)
 
-    # Load jacques model.
-    jacques_model = None 
+    # Jacques. Not used in model manager because jacques is mandatory in a seatizen session.
+    jacques_model = Jacques(opt.jacques_checkpoint_url, opt.tensorrt, batch_size)
 
-    if opt.no_jacques:
-        jacques_model = None 
-    elif opt.jacques_trt:
-        try:
-            from src.tensorrt_boost.jacques_predictor import JacquesPredictor
-        except ImportError as e:
-            print(e)
-            return
-        jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
-    else:
-        try:
-            from src.normal_gpu.jacques_predictor import JacquesPredictor, JacquesCSV
-        except ImportError as e:
-            print(e)
-            return
-        if opt.jacques_csv:
-            jacques_model = JacquesCSV()
-        else:
-            jacques_model = JacquesPredictor(opt.jacques_checkpoint_url, batch_size)
-
-    # Load Hugging face model.
-    multilabel_model = None 
-    if opt.no_multilabel:
-        multilabel_model = None 
-    elif opt.multilabel_trt:
-        try:
-            from src.tensorrt_boost.multilabel_classifier import MultiLabelClassifier
-        except ImportError as e:
-            print(e)
-            return
-        multilabel_model = MultiLabelClassifier(opt.multilabel_url, batch_size)
-    else:
-        try:
-            from src.normal_gpu.multilabel_classifier import MultiLabelClassifier
-        except ImportError as e:
-            print(e)
-            return
-        multilabel_model = MultiLabelClassifier(opt.multilabel_url, batch_size)
-
-    # Annotage images.
-    jacques_savers = None if opt.no_jacques or opt.jacques_csv else JacquesPredictions()
-    multilabel_savers = None if opt.no_multilabel else MultilabelPredictions(multilabel_model.classes_name)
-
-    if opt.no_save:
-        jacques_savers, multilabel_savers = None, None
- 
+    # Model manager to deal with all kind of model.
+    models_manager = ModelsManager(opt.models, opt.weights, opt.tensorrt, batch_size)
+    
     # Stat
     sessions_fail = []
     list_session = get_list_sessions(opt)
@@ -122,48 +89,23 @@ def pipeline_seatizen(opt: Namespace):
 
     for session in sessions:
 
-        jacques_model_name = opt.jacques_checkpoint_url.replace("/", "_")
         print(f"\nLaunched session {session.name}\n\n")
+        session_manager = SessionManager(session, opt.clean)
 
-        # Clean sessions if needed
-        path_IA = Path(session, "PROCESSED_DATA/IA")
-        if opt.clean:
-            print("\t-- Clean session \n\n")
-            # Clean PROCESSED_DATA/IA folder
-            if path_IA.exists():
-                shutil.rmtree(path_IA)
-
-            # Delete preview file
-            for file in session.iterdir():
-                if file.is_file() and file.suffix.lower() == ".pdf":
-                    file.unlink()
-        path_IA.mkdir(exist_ok=True, parents=True)
-
-        jacques_csv_name = Path(path_IA, f"{session.name}_jacques-v0.1.0_model-{jacques_model_name}.csv")
-        multilabel_pred_csv_name = Path(path_IA, f"{session.name}_{opt.multilabel_url.replace('/', '_')}.csv")
-        multilabel_scores_csv_name = Path(path_IA, f"{session.name}_{opt.multilabel_url.replace('/', '_')}_scores.csv")
-
-        metadata_csv_name = Path(session, "METADATA/metadata.csv")
-        if not Path.exists(metadata_csv_name):
+        if not session_manager.verify_metadata_csv():
             print(f"[ERROR] Session {session.name} doesn't have a metadata file.")
             sessions_fail.append(session.name)
             continue
 
         # Setup pipeline for current session
-        capture_images.setup(session, Sources.SESSION)
-        if opt.jacques_csv:
-            jacques_model.setup(jacques_csv_name)
-        if jacques_savers:
-            jacques_savers.setup(jacques_csv_name)
-        if multilabel_savers:
-            multilabel_savers.setup(multilabel_pred_csv_name, multilabel_scores_csv_name)      
+        capture_images.setup_new_session(session, Sources.SESSION)
+        jacques_model.setup_new_session(session)
+        models_manager.setup_new_session(session)
 
         pipeline = (
             capture_images |
-            jacques_model  |
-            multilabel_model |
-            jacques_savers |
-            multilabel_savers
+            jacques_model |
+            models_manager
         )
 
         # Iterate through pipeline
@@ -182,39 +124,34 @@ def pipeline_seatizen(opt: Namespace):
         finally:
             progress.close()
 
-        # Pipeline cleanup
-        if jacques_savers:
-            jacques_savers.cleanup()
-        if multilabel_savers:
-            multilabel_savers.cleanup()
+        jacques_model.cleanup()
+        models_manager.cleanup()
 
         print(f"\n -- Elapsed time: {datetime.now() - start_t} seconds\n\n")
 
-        if opt.no_multilabel: continue
         try:
-            predictions_gps = Path(session, "METADATA", "predictions_gps.csv")
-            predictions_scores_gps = Path(session, "METADATA", "predictions_scores_gps.csv")
-            useful_images = get_uselful_images(capture_images.frames_information, jacques_csv_name)
 
-            # Create predictions_gps.csv
+            # Add gpsposition to predictions.
             print("\t-- Join metadata GPS")
-            join_GPS_metadata(multilabel_pred_csv_name, metadata_csv_name, str(predictions_gps))
-            join_GPS_metadata(multilabel_scores_csv_name, metadata_csv_name, str(predictions_scores_gps))
-
+            models_manager.add_gps_position(session_manager.metadata_path)
+            
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
-            if check_and_remove_predictions_files_if_necessary(session, multilabel_pred_csv_name, predictions_gps, predictions_scores_gps, min_prediction):
-                print("[WARNING] All predictions have been removed due to lack of multilabel predictions.")
+            if session_manager.check_and_remove_predictions_files_if_necessary(min_prediction, jacques_model.jacques_file_pred, models_manager.files_generate_by_model()):
+                print("[WARNING] All predictions have been removed due to lack of useful images.")
                 continue
             
-            # Add preview pdf
-            print("\t-- Create pdf preview \n\n") # TODO Add bathy preview in global pdf
-            create_pdf_preview(session, useful_images, metadata_csv_name, predictions_gps, multilabel_model.classes_name)
+            # Create pdf preview.
+            print("\t-- Create pdf preview \n\n")
+            session_manager.create_tmp_folder()
+            models_manager.add_pdf_pages(session_manager.tmp_folder_pdf, session_manager.alpha3_code)
+            useful_images = get_uselful_images(capture_images.frames_information, jacques_model.jacques_file_pred)
+            create_pdf_preview(session_manager, useful_images)
 
-            # Create raster predictions
+            # Create raster predictions.
             print("\t-- Creating raster for each class \n\n")
-            if not opt.no_prediction_raster:
-                create_rasters_for_classes(predictions_scores_gps, multilabel_model.classes_name, path_IA, session.name, 'linear')
+            models_manager.add_predictions_rasters(session_manager)
             
+
             print(f"\nSession {session.name} end succesfully ! ", end="\n\n\n")
 
         except Exception:
@@ -229,4 +166,4 @@ def pipeline_seatizen(opt: Namespace):
     
 if __name__ == "__main__":
     args = parse_args()
-    pipeline_seatizen(args)
+    main(args)

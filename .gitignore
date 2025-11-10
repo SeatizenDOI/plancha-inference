@@ -1,6 +1,6 @@
 __pycache__
 annotations
-models
+weights
 profiling
-*.ipynb
 csv_inputs
+.vscode

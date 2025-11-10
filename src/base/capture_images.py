@@ -2,9 +2,9 @@ from PIL import Image
 from pathlib import Path
 from natsort import natsorted
 
-from .pipeline import Pipeline
-from .parse_opt import Sources
-from .load_images import load_frames_from_source
+from ..lib.pipeline import Pipeline
+from ..lib.parse_opt import Sources
+from ..lib.load_images import load_frames_from_source
 
 class CaptureImages(Pipeline):
     """Pipeline task to extract image from source"""
@@ -16,7 +16,7 @@ class CaptureImages(Pipeline):
         self.frame_id = None
         self.batch_size = batch_size
     
-    def setup(self, src: Path, mode: Sources):
+    def setup_new_session(self, src: Path, mode: Sources):
         """ Reset image loaded """
         self.frames_information = natsorted(load_frames_from_source(src, mode))
         self.frame_count = len(self.frames_information)

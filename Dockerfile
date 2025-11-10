@@ -20,7 +20,10 @@ RUN apt-get update && apt-get install libexpat1-dev -y && \
     geocube==0.7.1 \
     huggingface_hub==0.30.2 \
     torch==2.6.0 \ 
-    torchvision==0.21.0 && \
+    torchvision==0.21.0 \
+    polars==1.35.1 \
+    hf_xet==1.2.0 \
+    open-clip-torch==3.2.0 && \
     useradd -ms /bin/bash seatizen
 
 # Add local directory.
