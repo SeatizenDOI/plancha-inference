@@ -137,7 +137,7 @@ def main(opt: Namespace):
             
             # Remove predictions if minimal number of predictions is not achieve. We don't remove frame because sometimes it's also the raw data.
             if session_manager.check_and_remove_predictions_files_if_necessary(min_prediction, jacques_model.jacques_file_pred, models_manager.files_generate_by_model()):
-                print("[WARNING] All predictions have been removed due to lack of multilabel predictions.")
+                print("[WARNING] All predictions have been removed due to lack of useful images.")
                 continue
             
             # Create pdf preview.

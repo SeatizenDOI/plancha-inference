@@ -131,7 +131,7 @@ def get_jacques_engine_name(weight_folder, checkpoint: str, batch_size: int) -> 
         return str(path_to_jacques_engine)
 
     # Build Jacques model.
-    model = build_jacques_model(checkpoint)
+    model = build_jacques_model(weight_folder, checkpoint)
     model.eval()
 
     path_to_jacques_onnx = Path(weight_folder, checkpoint.replace("/", "_"), f"jacques_bs_{batch_size}.onnx")

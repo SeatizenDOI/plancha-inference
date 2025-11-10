@@ -15,13 +15,6 @@ from .registry import register_model
 from ..base.model_base import ModelBase
 from ..base.seatizen_tools import join_GPS_metadata
 
-try:
-    from ..lib.engine_tools import NeuralNetworkGPU, build_and_save_engine_from_onnx
-    HAS_TENSORRT = True
-except ImportError:
-    NeuralNetworkGPU = None
-    build_and_save_engine_from_onnx = None
-    HAS_TENSORRT = False
 
 TOKENIZER_STR = "ViT-L-14"
 HF_DATA_STR = "imageomics/TreeOfLife-200M"
@@ -39,7 +32,6 @@ class BioClip2(ModelBase):
         self.repo_name = weights
         self.batch_size = batch_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.use_tensorrt = use_tensorrt and HAS_TENSORRT
         self.init_model()
     
     def init_model(self):
@@ -78,14 +70,9 @@ class BioClip2(ModelBase):
                 self.metadata_df = pl.read_parquet(fd, low_memory = False)
                 self.metadata_df = self.metadata_df.with_columns(pl.col(["eol_page_id", "gbif_id"]).cast(pl.Int64))
 
-
-        if self.use_tensorrt:
-            print("[INFO] Using TensorRT engine for bioclip2.")
-            # self.model = NeuralNetworkGPU(get_multilabel_engine(self.weight_folder, self.repo_name, self.batch_size))
-        else:
-            print("[INFO] Using standard PyTorch model for bioclip2.")
-            self.model = create_model(self.repo_name, output_dict=True, require_pretrained=True)
-            self.model = self.model.to(self.device)
+        print("[INFO] Using standard PyTorch model for bioclip2.")
+        self.model = create_model(self.repo_name, output_dict=True, require_pretrained=True)
+        self.model = self.model.to(self.device)
 
 
     def setup_new_session(self, session: Path):
@@ -97,10 +84,8 @@ class BioClip2(ModelBase):
 
     def generator(self):
         """Unified generator dispatch"""
-        if self.use_tensorrt:
-            base_gen = self._generator_tensorrt()
-        else:
-            base_gen = self._generator_pytorch()
+
+        base_gen = self._generator_pytorch()
         
         # Wrap with CSV writing
         yield from self._generator_with_csv(base_gen)
@@ -114,12 +99,8 @@ class BioClip2(ModelBase):
                 key_with_max_value = max(open_domain_output, key=lambda k: open_domain_output[k])
                 _, gbif_id, eol_id, _, _ = self.get_sample_data(key_with_max_value)
                 self.csv_connector.write(f"{frame_info.filename},{key_with_max_value.split(' (')[0].replace(' ', ',')},{open_domain_output[key_with_max_value]},{gbif_id},{eol_id}\n")
-  
+            yield data
 
-    def _generator_tensorrt(self):
-        for data in self._data_stream():
-            continue
-    
 
     def _generator_with_csv(self, base_generator):
         """CSV-writing wrapper around another generator."""
@@ -145,7 +126,7 @@ class BioClip2(ModelBase):
 
 
     def files_generate_by_model(self) -> list[Path]:
-        return [self.csv_connector]
+        return [self.filename_pred, self.bioclip_gps]
     
 
     def format_name(self, taxon, common):
@@ -198,21 +179,25 @@ class BioClip2(ModelBase):
 
 
     def add_gps_position(self, metadata_path: Path) -> None:
+        print("-- [INFO] Add GPS Metadata for bioclip2")
+
         self.bioclip_gps = Path(metadata_path.parent, "bioclip_gps.csv")
         join_GPS_metadata(self.filename_pred, metadata_path, self.bioclip_gps)
     
 
     def add_pdf_pages(self, prefix: int, pdf_folder_tmp: Path, alpha3_code: int) -> Path:
+        print("-- [INFO] Create PDF page for bioclip2")
 
-        df = pd.read_csv(self.bioclip_gps)
-        if len(df) == 0: return None # No predictions
-        if "GPSLongitude" not in df or "GPSLatitude" not in df: return None # No GPS coordinate
-        if round(df["GPSLatitude"].std(), 10) == 0.0 or round(df["GPSLongitude"].std(), 10) == 0.0: return None # All frames have the same gps coordinate
-
+        df = pd.read_csv(self.filename_pred)
+        if len(df) == 0: 
+            print("-- [WARNING - BioClip2] No rows in dataframe — skipping.")            
+            return None # No predictions
+        
         summary = (
-            df.groupby(ranks + ["gbif_id", "eol_id"])["FileName"]
+            df.groupby(ranks + ["gbif_id", "eol_id"], dropna=False)["FileName"]
             .nunique()  # counts unique filenames
             .reset_index(name="n_frames")
+            .sort_values("n_frames", ascending=False)
         )
 
         path_to_save_img = Path(pdf_folder_tmp, f"{prefix}_bioclipclass.jpg")
@@ -225,7 +210,7 @@ class BioClip2(ModelBase):
         ax.axis('off')
 
         # Add title
-        plt.title("BioClip2 — Summary of the 20 Most Frequent Taxa", fontsize=14, fontweight='bold', pad=20)
+        plt.title(f"BioClip2 — Summary of the {len(top20)} Most Frequent Taxa", fontsize=14, fontweight='bold', pad=20)
 
         table = ax.table(
             cellText=top20.values,

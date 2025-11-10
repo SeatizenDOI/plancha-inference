@@ -133,7 +133,7 @@ def create_pdf_preview(sm: SessionManager, list_of_images: list[FrameInformation
     '''
 
     # PDF creation
-    
+    print("-- [INFO] Create general PDF")
     c = canvas.Canvas(str(sm.pdf_file), pagesize=letter)
     page_width, page_height = letter
     max_height = page_height - 100

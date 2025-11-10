@@ -25,7 +25,7 @@ class ModelsManager:
                 else model_info["default_weights"]
             )
 
-            print(f"\t[INFO] Loading {name} with weights: {weights}")
+            print(f"[INFO] Loading {name} with weights: {weights}")
             model = ModelClass(weights, use_tensorrt, batch_size)
             self.models.append(model)
 
