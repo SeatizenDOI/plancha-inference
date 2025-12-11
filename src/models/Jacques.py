@@ -47,7 +47,10 @@ class Jacques(ModelBase):
 
 
     def setup_new_session(self, session: Path):
-        self.jacques_file_pred = Path(session, "PROCESSED_DATA/IA", f"{session.name}_jacques-v0.1.0_model-{self.checkpoint}.csv")
+        # We put a new doi on Jacques after processing all sessions.
+        # To avoid having two name qfor the same weights, i prefer to hardly set the name.
+        checkpoint_name = '20240513_v20.0' if 'zenodo.17679393' in self.checkpoint else self.checkpoint 
+        self.jacques_file_pred = Path(session, "PROCESSED_DATA/IA", f"{session.name}_jacques-v0.1.0_model-{checkpoint_name}.csv")
         self.csv_connector = open(self.jacques_file_pred, "w")
         self.csv_connector.write("FileName,Useless,Score\n")
     
