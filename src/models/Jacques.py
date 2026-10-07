@@ -8,6 +8,7 @@ from torchvision.models.resnet import ResNet, resnet50
 from subprocess import Popen, PIPE, CalledProcessError
 
 from ..base.model_base import ModelBase
+from ..lib.preprocess_overlap import iter_with_preprocess_overlap
 from ..lib.tools import sigmoid, get_image_transformation
 
 try:
@@ -67,13 +68,17 @@ class Jacques(ModelBase):
         yield from self._generator_with_csv(base_gen)
     
 
-    def _generator_pytorch(self):
+    def _transform_frames(self, data):
+        """CPU resize/normalize for one batch (overlapped with prior GPU work)."""
+        return [self.transform(frame)[None, :] for frame in data["frames"]]
 
-        for data in self._data_stream():
+    def _generator_pytorch(self):
+        for data, images in iter_with_preprocess_overlap(
+            self._data_stream(), self._transform_frames
+        ):
             data["Useless"], data["prob_jacques"] = [], []
-            for frame in data["frames"]:
-                image = self.transform(frame)[None, :]
-                image.to(self.device) 
+            for image in images:
+                image.to(self.device)
 
                 with torch.no_grad():
                     logits = self.model(image)
@@ -85,9 +90,11 @@ class Jacques(ModelBase):
 
 
     def _generator_tensorrt(self):
-        for data in self._data_stream():
-            images = [(self.transform(frame)[None, :]).numpy() for frame in data["frames"]]
-            outputs = np.split(self.model.detect(np.stack(images))[0], self.batch_size)
+        for data, images in iter_with_preprocess_overlap(
+            self._data_stream(), self._transform_frames
+        ):
+            stacked = np.stack([image.numpy() for image in images])
+            outputs = np.split(self.model.detect(stacked)[0], self.batch_size)
             data["Useless"], data["prob_jacques"] = [], []
             for output in outputs:
                 prob = sigmoid(output)[0]
