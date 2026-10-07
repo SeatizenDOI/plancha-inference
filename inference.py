@@ -56,6 +56,7 @@ def parse_args() -> Namespace:
     ap.add_argument("-is", "--index_start", default="0", help="Choose from which index to start")
     ap.add_argument("-ip", "--index_position", default="-1", help="if != -1, take only session at selected index")
     ap.add_argument("-bs", "--batch_size", default="1", help="Numbers of frames processed in one time")
+    ap.add_argument("-pw", "--prefetch-workers", default="4", help="Thread workers decoding JPEG batches ahead of the GPU pipeline (1 = sequential)")
     ap.add_argument("-minp", "--min_prediction", default="100", help="Minimum for keeping predictions after inference.")
 
     return ap.parse_args()
@@ -64,12 +65,13 @@ def main(opt: Namespace):
     print("\n-- Parse input options", end="\n\n")
 
     batch_size = int(opt.batch_size) if opt.batch_size.isnumeric() else 1
+    prefetch_workers = int(opt.prefetch_workers) if str(opt.prefetch_workers).isnumeric() else 4
     min_prediction = int(opt.min_prediction) if opt.min_prediction.isnumeric() else 100
 
     print("\n-- Load the pipeline ...", end="\n\n")
 
     # Image input (csv with session path, folder_path_to_sessions, path_to_sessions)
-    capture_images = CaptureImages(batch_size)
+    capture_images = CaptureImages(batch_size, prefetch_workers=prefetch_workers)
 
     # Jacques. Not used in model manager because jacques is mandatory in a seatizen session.
     jacques_model = Jacques(opt.jacques_checkpoint_url, opt.tensorrt, batch_size)
