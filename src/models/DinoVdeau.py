@@ -19,6 +19,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from ..lib.tools import sigmoid
+from ..lib.preprocess_overlap import iter_with_preprocess_overlap
 from .registry import register_model
 from ..base.model_base import ModelBase
 from ..base.session_manager import SessionManager
@@ -84,18 +85,26 @@ class DinoVdeau(ModelBase):
         yield from self._generator_with_csv(base_gen)
 
 
+    def _process_frames(self, data):
+        """HF image processor for one batch (overlapped with prior GPU work)."""
+        return self.image_processor(data["frames"], return_tensors="pt")
+
     def _generator_pytorch(self):
-        for data in self._data_stream():
-            inputs = self.image_processor(data["frames"], return_tensors="pt").to(self.device)
+        for data, inputs in iter_with_preprocess_overlap(
+            self._data_stream(), self._process_frames
+        ):
+            inputs = inputs.to(self.device)
             with torch.no_grad():
                 logits = self.model(**inputs)["logits"]
             yield self._postprocess(data, logits)
 
 
     def _generator_tensorrt(self):
-        for data in self._data_stream():
-            inputs = self.image_processor(data["frames"], return_tensors="pt")["pixel_values"]
-            outputs = np.split(self.model.detect(np.stack(inputs))[0], self.batch_size)
+        for data, inputs in iter_with_preprocess_overlap(
+            self._data_stream(), self._process_frames
+        ):
+            pixel_values = inputs["pixel_values"]
+            outputs = np.split(self.model.detect(np.stack(pixel_values))[0], self.batch_size)
             yield self._postprocess(data, outputs)
 
 
